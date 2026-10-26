@@ -1,0 +1,4 @@
+{
+  "extends": "@orbita/config/tsconfig.library.json",
+  "include": ["src", "scripts", "test-support", "test", "drizzle.config.ts"]
+}

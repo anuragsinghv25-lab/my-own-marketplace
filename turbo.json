@@ -1,0 +1,42 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "NODE_ENV"
+  ],
+  "globalPassThroughEnv": [
+    "NEXT_PUBLIC_*",
+    "SUPABASE_*",
+    "DATABASE_URL*",
+    "POSTGRES_*",
+    "RESEND_*",
+    "EMAIL_FROM",
+    "SENTRY_*",
+    "APP_URL",
+    "SETUP_TOKEN",
+    "SKIP_DB_MIGRATE",
+    "TEST_DATABASE_URL",
+    "VERCEL*"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**"
+      ]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {},
+    "typecheck": {
+      "dependsOn": [
+        "^typecheck"
+      ]
+    },
+    "test": {}
+  }
+}

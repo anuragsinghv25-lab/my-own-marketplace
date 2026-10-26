@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Migrations are in sync with the schema
+        run: |
+          pnpm db:generate
+          git diff --exit-code -- supabase/migrations || (echo "::error::Schema changed without a migration. Run pnpm db:generate and commit." && exit 1)
+      - name: Migrations apply to a clean database
+        run: |
+          psql "$TEST_DATABASE_URL" -c "create database orbita_ci"
+          psql "postgres://postgres:postgres@localhost:5432/orbita_ci" -f packages/db/test-support/auth-stub.sql
+          DATABASE_URL=postgres://postgres:postgres@localhost:5432/orbita_ci pnpm db:migrate
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm depcheck
+      - run: pnpm --filter @orbita/web build

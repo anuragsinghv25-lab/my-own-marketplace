@@ -1,0 +1,17 @@
+{
+  "name": "@orbita/domain",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@orbita/config": "workspace:*",
+    "@types/node": "^22.10.0",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.12"
+  }
+}

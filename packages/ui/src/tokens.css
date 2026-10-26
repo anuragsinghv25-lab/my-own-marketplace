@@ -1,0 +1,98 @@
+/*
+ * Orbita design tokens, extracted from the prototype (docs/design/orbita-design-system.md).
+ * Colours are bare RGB triplets so one token gives solid fills, tints and rings.
+ * Import after `@import "tailwindcss";` in the app stylesheet.
+ */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+:root {
+  --bg: 245 245 247;
+  --card: 255 255 255;
+  --ink: 29 29 31;
+  --mute: 110 110 115;
+  --line: 229 229 234;
+  --soft: 242 242 247;
+  --accent: 79 70 229;
+  --ai: 126 58 209;
+  --ok: 22 128 66;
+  --warn: 168 94 0;
+  --bad: 196 38 38;
+  --onaccent: 255 255 255;
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --bg: 14 14 17;
+  --card: 28 28 32;
+  --ink: 245 245 247;
+  --mute: 160 160 170;
+  --line: 50 50 58;
+  --soft: 38 38 44;
+  --accent: 138 130 255;
+  --ai: 190 135 255;
+  --ok: 74 205 124;
+  --warn: 245 180 70;
+  --bad: 255 110 110;
+  --onaccent: 14 12 38;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: rgb(var(--bg));
+  --color-card: rgb(var(--card));
+  --color-ink: rgb(var(--ink));
+  --color-mute: rgb(var(--mute));
+  --color-line: rgb(var(--line));
+  --color-soft: rgb(var(--soft));
+  --color-accent: rgb(var(--accent));
+  --color-ai: rgb(var(--ai));
+  --color-ok: rgb(var(--ok));
+  --color-warn: rgb(var(--warn));
+  --color-bad: rgb(var(--bad));
+  --color-onaccent: rgb(var(--onaccent));
+
+  --font-sans: 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI',
+    system-ui, sans-serif;
+
+  --shadow-lift: 0 2px 4px #0000000d, 0 16px 40px -12px #00000029;
+  --shadow-soft: 0 1px 2px rgb(var(--soft)), 0 8px 24px -8px rgb(var(--soft));
+
+  --animate-fade-in: fadeIn 0.2s both;
+  --animate-toast-in: toastIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-slide-in: slideIn 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-shimmer: shimmer 1.4s linear infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes slideIn {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+
+@layer base {
+  html { background: var(--color-bg); color: var(--color-ink); }
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  ::selection { background: rgb(var(--accent) / 0.2); }
+  :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+}
+
+@utility glass {
+  background: rgb(var(--card) / 0.72);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
+  backdrop-filter: saturate(180%) blur(18px);
+}

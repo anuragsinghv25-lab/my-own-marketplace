@@ -1,0 +1,5 @@
+@import 'tailwindcss';
+@import '@orbita/ui/tokens.css';
+
+/* Tailwind scans this app automatically; add the shared UI package. */
+@source '../../../../packages/ui/src';
