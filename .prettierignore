@@ -1,0 +1,5 @@
+prototype/
+pnpm-lock.yaml
+supabase/migrations/meta/
+.next/
+docs/

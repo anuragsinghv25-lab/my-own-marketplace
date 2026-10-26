@@ -2,7 +2,7 @@
 
 **Goal:** a deployed, secure, Orbita-styled application shell where every role can log in and land on its own home page. No business features yet, but every later release plugs into what R0 builds.
 
-**Depends on:** nothing. **Indicative size:** 2 sprints.
+**Depends on:** nothing. **Indicative size:** 2 sprints. **Status:** built. Deploy with [docs/setup/deploy-r0.md](../setup/deploy-r0.md).
 
 ## Scope
 
@@ -38,3 +38,20 @@ Any category, brand or catalog data. Seller registration verification (R4). SSO 
 2. Invite a category checker; they accept and log in; they see the workbench menu only.
 3. Switch dark mode; the shell matches the prototype.
 4. Open the audit log; the invite and role grant are there.
+
+## Implementation notes (as built)
+
+| Item | Decision |
+| --- | --- |
+| Packages | `packages/{config,ui,domain,authz,db}` and `packages/modules/{identity,audit}`. Packages ship TypeScript source; Next compiles them (`transpilePackages`). |
+| Auth emails | Invite, sign-in-link and reset emails are sent by the app through Resend using one-time links from the Supabase Admin API, so Supabase's own mailer and templates are not needed. Without Resend, admins get a copyable invite link. |
+| First admin | `/setup`, protected by `SETUP_TOKEN`, works only while no platform admin exists. It can also create one demo user per role. |
+| Scopes before R1/R4 | Workgroups (R1) and seller organisations (R4) do not exist yet, so category roles are granted platform-wide and seller roles are attached to a fixed demo organisation id. The grant model already stores scope. |
+| Separation of duties | Enforced at grant time: platform admin cannot hold approval roles; auditor cannot hold any other role. Abilities also forbid approving anything you submitted or edited. |
+| Role changes | Roles are read from the database on every request, so grants and revocations apply immediately. Deactivation also bans the Supabase user. |
+| Audit | `audit_events` is append-only (trigger blocks update, delete, truncate). Events are written in the same transaction as the change and carry the request id. |
+| Database exposure | Row level security is on with no policies for every app table, so the public Supabase Data API cannot read them; the app connects to Postgres directly from the server. |
+| Migrations | Drizzle generates SQL into `supabase/migrations`; a hand-written migration adds RLS, triggers and the FK to `auth.users`. Applied during each Vercel build. Previews share the one database. |
+| API | Contracts in `apps/web/src/server/api/contracts.ts` drive validation, the OpenAPI document (`/api/v1/openapi.json`) and a test that fails if any route lacks a contract. |
+| Design gallery | `/design` (public) instead of Storybook. |
+| Not yet | i18n plumbing, per-PR preview databases (needs Supabase branching on a paid plan), Sentry source-map upload. |

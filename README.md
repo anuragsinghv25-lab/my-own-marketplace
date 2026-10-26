@@ -6,10 +6,15 @@ Orbita is a multi-role marketplace platform for governed product catalogs: admin
 
 ## Status
 
-**Architecture and design phase.** No application code yet. The repo currently holds:
+**R0 Foundations built**: login for every role, role-driven Orbita app shell, admin users/roles, audit log,
+`/api/v1` with OpenAPI, CI. Business features start in R1. **Deploying it:** [docs/setup/deploy-r0.md](docs/setup/deploy-r0.md).
 
 | Path | What it is |
 | --- | --- |
+| [`apps/web/`](apps/web) | Next.js app (pages, `/api/v1` route handlers, adapters to Supabase and Resend) |
+| [`packages/`](packages) | `ui` (Orbita design system), `authz` (roles + CASL), `db` (Drizzle schema), `domain`, `modules/identity`, `modules/audit` |
+| [`supabase/`](supabase/README.md) | SQL migrations and local Supabase config |
+| [`docs/setup/deploy-r0.md`](docs/setup/deploy-r0.md) | Step-by-step: Supabase, Vercel, domain, email |
 | [`docs/architecture/`](docs/architecture/README.md) | Technical architecture: scope, roles, domain model, system design, workflows, tech stack, AI, roadmap |
 | [`docs/releases/`](docs/releases/README.md) | Release plan R0–R9 with detailed scope, screens and exit demos |
 | [`docs/adr/`](docs/adr/README.md) | Architecture Decision Records |
@@ -26,7 +31,22 @@ flowchart LR
 
 Roles: platform admin, template manager, workgroup manager, category creator / drafter / checker / approver, vendor-assessment officer, brand specialist, agency manager, product reviewer, marketplace manager, committee, auditor, seller admin, seller lister, brand owner (OEM). See [roles and permissions](docs/architecture/02-roles-and-permissions.md).
 
-## Planned stack
+## Run it locally
+
+Needs Node 22, pnpm 10 and (for the full stack) Docker with the [Supabase CLI](https://supabase.com/docs/guides/local-development).
+
+```bash
+pnpm install
+supabase start                      # local Postgres, Auth, Studio on :54321–54324
+cp .env.example apps/web/.env.local # paste the keys `supabase start` printed
+pnpm db:migrate && pnpm db:seed     # tables + admin@example.com and one demo user per role
+pnpm dev                            # http://localhost:3000
+```
+
+Checks: `pnpm lint`, `pnpm typecheck`, `pnpm test` (set `TEST_DATABASE_URL` to run the Postgres integration tests),
+`pnpm depcheck` (module boundaries). Design system gallery: `/design`. API description: `/api/v1/openapi.json`.
+
+## Stack
 
 TypeScript monorepo (pnpm + Turborepo) · Next.js + React + Tailwind (Orbita design tokens) deployed on **Vercel** · API as Next.js route handlers over framework-free modules · Vercel Workflows + Cron for background jobs · **Supabase** Postgres (JSONB, full-text, pgvector), Auth and Storage · Drizzle · CASL authorisation · GoRules ZEN for rules · provider-agnostic AI gateway. Services and costs: [09 · Deployment](docs/architecture/09-deployment-and-services.md). Details and reasoning in [06 · Tech stack](docs/architecture/06-tech-stack.md).
 

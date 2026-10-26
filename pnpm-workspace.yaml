@@ -1,0 +1,12 @@
+packages:
+  - apps/*
+  - packages/*
+  - packages/modules/*
+
+onlyBuiltDependencies:
+  - "@sentry/cli"
+  - esbuild
+  - sharp
+  - supabase
+ignoredBuiltDependencies:
+  - unrs-resolver

@@ -1,0 +1,6 @@
+{
+  "name": "@orbita/config",
+  "version": "0.0.0",
+  "private": true,
+  "files": ["tsconfig.base.json", "tsconfig.library.json", "tsconfig.react.json"]
+}

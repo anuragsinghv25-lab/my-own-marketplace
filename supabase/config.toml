@@ -1,0 +1,29 @@
+# Supabase CLI configuration for local development (`supabase start`).
+# Hosted projects are configured in the dashboard; see docs/setup/deploy-r0.md.
+project_id = "orbita"
+
+[api]
+port = 54321
+schemas = ["public"]
+
+[db]
+port = 54322
+major_version = 17
+
+[studio]
+port = 54323
+
+[inbucket]
+# Local mail catcher: emails sent by Supabase Auth appear at http://127.0.0.1:54324
+port = 54324
+
+[auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/confirm"]
+# Staff are invited by an admin; nobody signs themselves up.
+enable_signup = false
+minimum_password_length = 10
+
+[auth.email]
+enable_signup = false
+enable_confirmations = true
