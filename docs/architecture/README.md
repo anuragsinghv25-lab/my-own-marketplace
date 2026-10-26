@@ -11,7 +11,10 @@ Start here. Read in order the first time.
 | [05 · Workflows](05-workflows.md) | Review engine, category versions, brand and catalog flows, background jobs |
 | [06 · Tech stack](06-tech-stack.md) | What we use for each layer and why |
 | [07 · AI architecture](07-ai-architecture.md) | Where AI plugs in, and the guardrails |
-| [08 · Repo structure and roadmap](08-repo-structure-and-roadmap.md) | Folder layout and milestones M0–M6 |
+| [08 · Repo structure and roadmap](08-repo-structure-and-roadmap.md) | Folder layout and milestones |
+| [09 · Deployment and services](09-deployment-and-services.md) | Vercel + Supabase setup, other services needed, costs, environments |
+
+Release scopes: [docs/releases](../releases/README.md) (R0–R9).
 
 Related: [ADRs](../adr/README.md) · [Orbita design system](../design/orbita-design-system.md) · [Open questions](../brainstorm/open-questions.md)
 
@@ -19,13 +22,13 @@ Related: [ADRs](../adr/README.md) · [Orbita design system](../design/orbita-des
 
 ```mermaid
 flowchart TB
-  subgraph Web["apps/web · Next.js · Orbita UI"]
+  subgraph Web["apps/web · Next.js on Vercel · Orbita UI"]
     S[Seller app]
     WB[Category workbench]
     RD[Review desk]
     AC[Admin console]
   end
-  subgraph Backend["apps/api + apps/worker · NestJS modular monolith"]
+  subgraph Backend["Next.js route handlers + Vercel Workflows over packages/modules"]
     IAM[Identity & access]
     LIB[Attribute library<br/>+ flag definitions]
     TAX[Taxonomy]
@@ -37,8 +40,8 @@ flowchart TB
     AI[AI services]
     AUD[Audit + outbox]
   end
-  PG[(PostgreSQL<br/>+ pgvector + pg-boss)]
-  S3[(Object storage)]
+  PG[(Supabase Postgres<br/>+ pgvector)]
+  S3[(Supabase Storage)]
   Web --> Backend
   LIB & TAX --> CV --> CC
   CC -- immutable contract --> CAT

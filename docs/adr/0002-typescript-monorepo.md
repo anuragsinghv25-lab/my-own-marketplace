@@ -1,6 +1,6 @@
 # 0002 · TypeScript monorepo: Next.js web + NestJS API + worker
 
-- **Status:** Accepted
+- **Status:** Accepted, amended by [0008](0008-vercel-and-supabase.md): the NestJS API and worker are replaced by Next.js route handlers, Vercel Workflows and Cron; modules move to `packages/modules`
 - **Date:** 2026-10-27
 
 ## Context

@@ -13,6 +13,7 @@ Store rules as **JSON decision graphs** evaluated by the open-source **GoRules Z
 - Confirm ZEN runs in the browser (WASM) for live hints, or provide a thin server endpoint for evaluation.
 - Decide whether to embed GoRules' visual editor in the category workbench or build a simpler table editor.
 - Benchmark evaluation for bulk uploads (thousands of rows).
+- Confirm the native Node binding loads in Vercel Functions (or use the WASM build).
 
 ## Alternatives considered
 - **json-rules-engine:** simple and pure JS, but no decision-table model or editor.

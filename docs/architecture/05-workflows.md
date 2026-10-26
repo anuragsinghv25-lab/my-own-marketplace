@@ -33,7 +33,7 @@ const brandReview: ReviewDefinition = {
   escalation: ['marketplace_manager', 'committee_member'],
   riskRules: 'rules/brand-risk.json',      // ZEN decision graph
   checks: ['prohibited_name', 'trademark_owner_match', 'duplicate_brand'],
-  sla: { amber: 'P2D', red: 'P5D' },        // ISO-8601 durations; timers in the worker
+  sla: { amber: 'P2D', red: 'P5D' },        // ISO-8601 durations; timers run as Vercel Workflows
   sendBackTo: 'previous_actor',
   attemptsLimit: { per: ['seller', 'brand', 'category'], max: 3, cooldown: 'P30D' },
   reasonCodes: 'reason-codes/brand.json',
@@ -129,7 +129,9 @@ flowchart TB
   REV --> LIVE([Published])
 ```
 
-## Notifications and timers (worker jobs)
+## Notifications and timers (Vercel Workflows and Cron)
+
+Event-driven jobs run as **Vercel Workflows** started after the database commit; scheduled scans run as **Vercel Cron** endpoints.
 
 | Job | Trigger |
 | --- | --- |

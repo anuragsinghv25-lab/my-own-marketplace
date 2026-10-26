@@ -54,6 +54,8 @@ Every arrow carries data forward. A flag set during category configuration (say 
 
 ## Scope by phase
 
+> Superseded in detail by the [release plan](../releases/README.md) (R0–R9). The summary below still holds.
+
 | Phase | In scope | Out of scope |
 | --- | --- | --- |
 | **MVP (Phase 1)** | Login + roles; attribute library; category tree; category config and specs with versions; category approval; brand request and review; catalog create / pair / clone against a category version; product approval review; audit trail; Orbita UI | Buyer app, orders, payments, bids, real government integrations |
