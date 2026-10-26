@@ -1,6 +1,6 @@
 # 0006 · Better Auth for authentication, CASL for authorisation
 
-- **Status:** Accepted
+- **Status:** Accepted, amended by [0008](0008-vercel-and-supabase.md): authentication moves to Supabase Auth; CASL authorisation stands
 - **Date:** 2026-10-27
 
 ## Context

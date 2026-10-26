@@ -7,7 +7,7 @@
 The domain has many tightly related parts (category config feeds catalog validation, which feeds review, which feeds maintenance). The team is small, and requirements will move a lot in the first year. Microservices would force us to decide service boundaries and distributed transactions before we understand the domain.
 
 ## Decision
-Build one backend codebase deployed as two processes (API and worker) sharing one PostgreSQL database. Inside it, each bounded context is a module that owns its tables, exposes a public service interface and publishes domain events through a transactional outbox. Module boundaries are enforced by lint rules (dependency-cruiser).
+Build one codebase sharing one PostgreSQL database (deployed on Vercel per [ADR 0008](0008-vercel-and-supabase.md): Next.js route handlers plus Vercel Workflows for background work). Inside it, each bounded context is a module that owns its tables, exposes a public service interface and publishes domain events through a transactional outbox. Module boundaries are enforced by lint rules (dependency-cruiser).
 
 ## Consequences
 - One deploy, one database, simple local development, ACID transactions across a use case.

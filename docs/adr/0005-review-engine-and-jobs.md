@@ -1,6 +1,6 @@
 # 0005 · Own generic review engine on Postgres + pg-boss
 
-- **Status:** Accepted
+- **Status:** Accepted, amended by [0008](0008-vercel-and-supabase.md): the review engine stands; pg-boss is replaced by Vercel Workflows (timers, orchestration) and Vercel Cron
 - **Date:** 2026-10-27
 
 ## Context
