@@ -42,6 +42,11 @@ export const supabaseAuthDirectory: AuthDirectory = {
     return { userId: data.user.id };
   },
 
+  async setPassword(userId, password) {
+    const { error } = await adminSupabase().auth.admin.updateUserById(userId, { password });
+    if (error) fail(error.message, error.status);
+  },
+
   async setBanned(userId, banned) {
     const { error } = await adminSupabase().auth.admin.updateUserById(userId, {
       ban_duration: banned ? '876000h' : 'none',

@@ -170,7 +170,7 @@ export function SetupForm() {
   const [demo, setDemo] = useState(true);
 
   if (state.status === 'ok') {
-    const demoUsers = (state.data?.demoUsers as { email: string; role: string }[] | undefined) ?? [];
+    const demoUsers = (state.data?.demoUsers as { email: string; role: string; purpose: string }[] | undefined) ?? [];
     return (
       <div className="space-y-4">
         <Notice tone="ok">Setup complete. Sign in as {String(state.data?.adminEmail)}.</Notice>
@@ -180,7 +180,7 @@ export function SetupForm() {
             <ul className="text-xs text-mute space-y-0.5 max-h-56 overflow-y-auto">
               {demoUsers.map((u) => (
                 <li key={u.email}>
-                  <code className="text-ink">{u.email}</code> · {u.role}
+                  <code className="text-ink">{u.email}</code> · {u.purpose}
                 </li>
               ))}
             </ul>
@@ -213,8 +213,8 @@ export function SetupForm() {
       <label className="flex items-start gap-2.5 text-sm">
         <Checkbox name="demo" checked={demo} onChange={(e) => setDemo(e.target.checked)} className="mt-0.5" />
         <span>
-          <span className="font-medium">Create demo users, one per role</span>
-          <span className="block text-xs text-mute">Useful for testing each role&apos;s view. Deactivate them before real use.</span>
+          <span className="font-medium">Create the demo team (5 accounts)</span>
+          <span className="block text-xs text-mute">Category manager, approver, reviewer, a reseller and an OEM seller: enough to walk every flow. You can reset or remove them later in Admin → Users.</span>
         </span>
       </label>
       {demo ? (
@@ -222,7 +222,7 @@ export function SetupForm() {
           <Field label="Demo password" htmlFor="demoPassword" error={fieldError(state, 'demoPassword')}>
             <Input id="demoPassword" name="demoPassword" type="text" autoComplete="off" required />
           </Field>
-          <Field label="Demo email domain" htmlFor="demoDomain" hint="e.g. category-checker@example.com">
+          <Field label="Demo email domain" htmlFor="demoDomain" hint="e.g. category-manager@example.com">
             <Input id="demoDomain" name="demoDomain" defaultValue="example.com" />
           </Field>
         </div>

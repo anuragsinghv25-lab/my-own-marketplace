@@ -15,6 +15,8 @@ export interface AuthDirectory {
   magicLink(email: string): Promise<EmailLink>;
   /** Create a confirmed user with a password (first admin, demo users). */
   createWithPassword(email: string, password: string, fullName: string): Promise<{ userId: string }>;
+  /** Set a user's password (used only for demo accounts). */
+  setPassword(userId: string, password: string): Promise<void>;
   /** Block or unblock sign-in. */
   setBanned(userId: string, banned: boolean): Promise<void>;
   /** Compensation when a later step fails. */

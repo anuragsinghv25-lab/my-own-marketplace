@@ -25,6 +25,10 @@ const auth: AuthDirectory = {
     if (error || !data.user) throw error ?? new Error('no user');
     return { userId: data.user.id };
   },
+  async setPassword(id, password) {
+    const { error } = await admin.auth.admin.updateUserById(id, { password });
+    if (error) throw error;
+  },
   async setBanned() {},
   async delete(id) {
     await admin.auth.admin.deleteUser(id);
@@ -41,7 +45,7 @@ try {
       admin: { email: 'admin@example.com', fullName: 'Platform Admin', password },
       demo: { password, emailDomain: 'example.com' },
     });
-    console.log(`Seeded admin@example.com and ${r.demoUsers.length} demo users. Password: ${password}`);
+    console.log(`Seeded admin@example.com and the demo team (${r.demoUsers.map((u) => u.email).join(', ')}). Password: ${password}`);
   }
 } finally {
   await sql.end();

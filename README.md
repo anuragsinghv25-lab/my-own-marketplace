@@ -29,7 +29,7 @@ flowchart LR
   A[Attribute library<br/>& templates] --> B[Category<br/>config & specs] --> C[Category<br/>approval] --> D[Brand<br/>request & review] --> E[Catalog<br/>create · pair · review] --> F[Live listings<br/>& maintenance]
 ```
 
-Roles: platform admin, template manager, workgroup manager, category creator / drafter / checker / approver, vendor-assessment officer, brand specialist, agency manager, product reviewer, marketplace manager, committee, auditor, seller admin, seller lister, brand owner (OEM). See [roles and permissions](docs/architecture/02-roles-and-permissions.md).
+Roles (8): platform admin, category manager, approver, reviewer, auditor, seller admin, seller staff, brand owner (OEM, assigned automatically). See [roles and permissions](docs/architecture/02-roles-and-permissions.md).
 
 ## Run it locally
 
@@ -39,7 +39,7 @@ Needs Node 22, pnpm 10 and (for the full stack) Docker with the [Supabase CLI](h
 pnpm install
 supabase start                      # local Postgres, Auth, Studio on :54321–54324
 cp .env.example apps/web/.env.local # paste the keys `supabase start` printed
-pnpm db:migrate && pnpm db:seed     # tables + admin@example.com and one demo user per role
+pnpm db:migrate && pnpm db:seed     # tables + admin@example.com and the 5-account demo team
 pnpm dev                            # http://localhost:3000
 ```
 

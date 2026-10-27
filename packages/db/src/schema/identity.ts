@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { index, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, index, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 export const userStatus = pgEnum('user_status', ['invited', 'active', 'deactivated']);
 export const userKind = pgEnum('user_kind', ['staff', 'seller']);
@@ -18,6 +18,8 @@ export const profiles = pgTable(
     fullName: text('full_name').notNull().default(''),
     kind: userKind('kind').notNull().default('staff'),
     status: userStatus('status').notNull().default('invited'),
+    /** Demo account created by setup: password can be set by an admin, and it can be rebuilt or removed. */
+    isDemo: boolean('is_demo').notNull().default(false),
     invitedBy: uuid('invited_by'),
     invitedAt: timestamp('invited_at', { withTimezone: true }),
     activatedAt: timestamp('activated_at', { withTimezone: true }),

@@ -15,6 +15,20 @@
       "when": 1793044972531,
       "tag": "20261026200252_supabase_security",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793116371849,
+      "tag": "20261027155251_profiles_is_demo",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793116373296,
+      "tag": "20261027155253_consolidate_roles",
+      "breakpoints": true
     }
   ]
 }

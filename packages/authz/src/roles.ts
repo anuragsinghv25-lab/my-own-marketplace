@@ -29,155 +29,65 @@ export interface RoleDefinition {
   conflictsWith?: readonly RoleKey[];
 }
 
-const APPROVAL_ROLES = [
-  'category_approver',
-  'va_officer',
-  'brand_specialist',
-  'agency_manager',
-  'product_reviewer',
-  'marketplace_manager',
-  'committee_member',
-] as const;
-
 export const ROLE_KEYS = [
   'platform_admin',
-  'template_manager',
-  'workgroup_manager',
-  'category_creator',
-  'category_drafter',
-  'category_checker',
-  'category_approver',
-  'va_officer',
-  'brand_specialist',
-  'agency_manager',
-  'product_reviewer',
-  'marketplace_manager',
-  'committee_member',
+  'category_manager',
+  'approver',
+  'reviewer',
   'auditor',
   'seller_admin',
-  'seller_lister',
-  'seller_pricing',
+  'seller_staff',
   'brand_owner',
 ] as const;
 export type RoleKey = (typeof ROLE_KEYS)[number];
 
 const ALL_OTHER = (self: RoleKey) => ROLE_KEYS.filter((r) => r !== self);
 
+/**
+ * Eight roles cover every category, brand and catalog flow (R0.1 consolidation; the mapping
+ * from the original 18 is in docs/architecture/02-roles-and-permissions.md).
+ * Separation of duties is kept where the flows need an independent second person:
+ * category manager → approver, reviewer → approver, and nobody approves their own work.
+ */
 export const ROLES: Record<RoleKey, RoleDefinition> = {
   platform_admin: {
     key: 'platform_admin',
     label: 'Platform admin',
     side: 'platform',
-    description: 'Users, role grants and system settings. Never approves business requests.',
+    description:
+      'Users, roles and audit, plus shared configuration: attribute library, flag profiles and workgroups. Never approves business requests.',
     scopes: ['global'],
     home: 'AdminConsole',
     assignable: true,
-    conflictsWith: [...APPROVAL_ROLES, 'auditor'],
+    conflictsWith: ['approver', 'reviewer', 'auditor'],
   },
-  template_manager: {
-    key: 'template_manager',
-    label: 'Template manager',
+  category_manager: {
+    key: 'category_manager',
+    label: 'Category manager',
     side: 'platform',
-    description: 'Attribute library, units, value lists, flag profiles and certificate types.',
-    scopes: ['global'],
-    home: 'AdminConsole',
-    assignable: true,
-  },
-  workgroup_manager: {
-    key: 'workgroup_manager',
-    label: 'Workgroup manager',
-    side: 'platform',
-    description: 'Creates workgroups, assigns category subtrees and members.',
-    scopes: ['global'],
-    home: 'AdminConsole',
-    assignable: true,
-  },
-  category_creator: {
-    key: 'category_creator',
-    label: 'Category creator',
-    side: 'platform',
-    description: 'Creates and moves category nodes, assigns workgroup and checker.',
+    description:
+      'Creates categories in the tree, drafts and checks their flags, specifications and rules, and submits versions for approval.',
     scopes: ['workgroup', 'global'],
     home: 'Workbench',
     assignable: true,
   },
-  category_drafter: {
-    key: 'category_drafter',
-    label: 'Category drafter',
+  approver: {
+    key: 'approver',
+    label: 'Approver',
     side: 'platform',
-    description: 'Edits draft category versions: flags, specs and rules.',
+    description:
+      'Senior decisions: approves and schedules category versions, and decides escalated brand, catalog and vendor cases. Never on their own work.',
     scopes: ['workgroup', 'global'],
-    home: 'Workbench',
-    assignable: true,
-  },
-  category_checker: {
-    key: 'category_checker',
-    label: 'Category checker',
-    side: 'platform',
-    description: 'Drafter powers plus review, send back and submit for approval.',
-    scopes: ['workgroup', 'global'],
-    home: 'Workbench',
-    assignable: true,
-  },
-  category_approver: {
-    key: 'category_approver',
-    label: 'Category approver',
-    side: 'platform',
-    description: 'Approves and schedules category versions. Never on a version they edited.',
-    scopes: ['workgroup', 'global'],
-    home: 'Workbench',
-    assignable: true,
-  },
-  va_officer: {
-    key: 'va_officer',
-    label: 'Vendor assessment officer',
-    side: 'platform',
-    description: 'Verifies seller identity and OEM status.',
-    scopes: ['global'],
     home: 'ReviewDesk',
     assignable: true,
+    conflictsWith: ['reviewer'],
   },
-  brand_specialist: {
-    key: 'brand_specialist',
-    label: 'Brand specialist',
+  reviewer: {
+    key: 'reviewer',
+    label: 'Reviewer',
     side: 'platform',
-    description: 'Reviews brand requests: approve, reject, ask for info, escalate.',
-    scopes: ['global'],
-    home: 'ReviewDesk',
-    assignable: true,
-  },
-  agency_manager: {
-    key: 'agency_manager',
-    label: 'Agency manager',
-    side: 'platform',
-    description: 'Specialist powers plus assigning work and reviving brands.',
-    scopes: ['global'],
-    home: 'ReviewDesk',
-    assignable: true,
-  },
-  product_reviewer: {
-    key: 'product_reviewer',
-    label: 'Product reviewer',
-    side: 'platform',
-    description: 'Reviews catalogs (product approval).',
-    scopes: ['global'],
-    home: 'ReviewDesk',
-    assignable: true,
-  },
-  marketplace_manager: {
-    key: 'marketplace_manager',
-    label: 'Marketplace manager',
-    side: 'platform',
-    description: 'Escalations, disputes, priority processing and policy exceptions.',
-    scopes: ['global'],
-    home: 'ReviewDesk',
-    assignable: true,
-  },
-  committee_member: {
-    key: 'committee_member',
-    label: 'Committee member',
-    side: 'platform',
-    description: 'Decides special cases referred by a marketplace manager.',
+    description:
+      'First-line review of vendor assessments, brand requests and catalogs: approve, reject, ask for information or escalate.',
     scopes: ['global'],
     home: 'ReviewDesk',
     assignable: true,
@@ -186,7 +96,7 @@ export const ROLES: Record<RoleKey, RoleDefinition> = {
     key: 'auditor',
     label: 'Auditor',
     side: 'platform',
-    description: 'Read-only access to audit trails and history. Never writes.',
+    description: 'Read-only access to everything, including the audit trail. Never writes.',
     scopes: ['global'],
     home: 'AdminConsole',
     assignable: true,
@@ -196,25 +106,17 @@ export const ROLES: Record<RoleKey, RoleDefinition> = {
     key: 'seller_admin',
     label: 'Seller admin',
     side: 'seller',
-    description: "Manages the seller organisation's users, divisions and certificates.",
+    description:
+      "The seller organisation's main account: profile, users, brands, catalogs, offers and certificates.",
     scopes: ['org'],
     home: 'SellerApp',
     assignable: true,
   },
-  seller_lister: {
-    key: 'seller_lister',
-    label: 'Seller lister',
+  seller_staff: {
+    key: 'seller_staff',
+    label: 'Seller staff',
     side: 'seller',
-    description: 'Creates, pairs and clones catalogs; edits offers.',
-    scopes: ['org'],
-    home: 'SellerApp',
-    assignable: true,
-  },
-  seller_pricing: {
-    key: 'seller_pricing',
-    label: 'Seller pricing',
-    side: 'seller',
-    description: 'Edits price and stock only.',
+    description: 'Extra users a seller adds: brand requests, catalogs and offers, but not organisation settings.',
     scopes: ['org'],
     home: 'SellerApp',
     assignable: true,
@@ -223,11 +125,29 @@ export const ROLES: Record<RoleKey, RoleDefinition> = {
     key: 'brand_owner',
     label: 'Brand owner (OEM)',
     side: 'seller',
-    description: 'Derived after OEM assessment. Authorises resellers and approves their catalogs.',
+    description: 'Given automatically after OEM assessment. Authorises resellers and approves their catalogs.',
     scopes: ['brand'],
     home: 'SellerApp',
     assignable: false,
   },
+};
+
+/** Roles that existed before R0.1, mapped to their replacement (null = no longer granted). */
+export const LEGACY_ROLE_MAP: Record<string, RoleKey | null> = {
+  template_manager: null,
+  workgroup_manager: null,
+  category_creator: 'category_manager',
+  category_drafter: 'category_manager',
+  category_checker: 'category_manager',
+  category_approver: 'approver',
+  agency_manager: 'approver',
+  marketplace_manager: 'approver',
+  committee_member: 'approver',
+  va_officer: 'reviewer',
+  brand_specialist: 'reviewer',
+  product_reviewer: 'reviewer',
+  seller_lister: 'seller_staff',
+  seller_pricing: 'seller_staff',
 };
 
 export function isRoleKey(value: unknown): value is RoleKey {

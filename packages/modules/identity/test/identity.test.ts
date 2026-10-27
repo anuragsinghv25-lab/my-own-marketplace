@@ -18,6 +18,9 @@ import {
   resendInvite,
   revokeRole,
   roleMemberCounts,
+  rebuildDemoTeam,
+  setAllDemoPasswords,
+  setDemoPassword,
   setUserActive,
   type AuthDirectory,
   type Ctx,
@@ -30,6 +33,7 @@ import {
 function fakeAuth(db: () => Database) {
   const banned = new Set<string>();
   const deleted: string[] = [];
+  const passwords = new Map<string, string>();
   const auth: AuthDirectory = {
     async invite(email) {
       const id = randomUUID();
@@ -44,6 +48,9 @@ function fakeAuth(db: () => Database) {
       await db().execute(sql`insert into auth.users (id, email) values (${id}, ${email})`);
       return { userId: id };
     },
+    async setPassword(id, pw) {
+      passwords.set(id, pw);
+    },
     async setBanned(id, b) {
       if (b) banned.add(id);
       else banned.delete(id);
@@ -53,7 +60,7 @@ function fakeAuth(db: () => Database) {
       await db().execute(sql`delete from auth.users where id = ${id}`);
     },
   };
-  return { auth, banned, deleted };
+  return { auth, banned, deleted, passwords };
 }
 
 function fakeMailer(delivered: boolean) {
@@ -101,13 +108,13 @@ describe.skipIf(!testDatabaseUrl)('identity module (Postgres)', () => {
     expect(await needsBootstrap(t.db)).toBe(true);
   });
 
-  it('bootstraps the first admin and one demo user per assignable role', async () => {
+  it('bootstraps the first admin and the five-person demo team', async () => {
     const r = await bootstrapPlatform(deps, meta, {
       admin: { email: 'Admin@Example.com', fullName: 'Ada Admin', password: 'correct-horse-1' },
       demo: { password: 'demo-password-1', emailDomain: 'example.com' },
     });
-    expect(r.demoUsers).toHaveLength(16); // 18 roles − platform_admin − brand_owner (derived)
-    expect(r.demoUsers.map((u) => u.email)).toContain('category-checker@example.com');
+    expect(r.demoUsers.map((u) => u.role)).toEqual(['category_manager', 'approver', 'reviewer', 'seller_admin', 'seller_admin']);
+    expect(r.demoUsers.map((u) => u.email)).toContain('category-manager@example.com');
     expect(await needsBootstrap(t.db)).toBe(false);
     admin = await ctxFor(r.adminId);
     expect(admin.actor.email).toBe('admin@example.com');
@@ -120,20 +127,20 @@ describe.skipIf(!testDatabaseUrl)('identity module (Postgres)', () => {
     ).rejects.toThrow(/already been completed/);
   });
 
-  it('invites a category checker: profile, grant, audit and email in one go', async () => {
+  it('invites a category manager: profile, grant, audit and email in one go', async () => {
     const r = await inviteUser(deps, admin, {
       email: 'Checker.One@example.com',
       fullName: 'Chandra Checker',
-      roles: [{ role: 'category_checker', scopeType: 'global', scopeId: null }],
+      roles: [{ role: 'category_manager', scopeType: 'global', scopeId: null }],
     });
     expect(r.manualLink).toBeNull();
     expect(r.user.status).toBe('invited');
     expect(r.user.email).toBe('checker.one@example.com');
-    expect(r.user.grants.map((g) => g.role)).toEqual(['category_checker']);
+    expect(r.user.grants.map((g) => g.role)).toEqual(['category_manager']);
 
     const email = mail.sent.at(-1)!;
     expect(email.to).toBe('checker.one@example.com');
-    expect(email.roleLabels).toEqual(['Category checker']);
+    expect(email.roleLabels).toEqual(['Category manager']);
     expect(email.url).toMatch(/^https:\/\/orbita\.example\.com\/auth\/confirm\?token_hash=hash-.+&type=invite&next=%2Fwelcome$/);
 
     const audit = await listAuditEvents(t.db, admin.ability, { subjectId: r.user.id });
@@ -146,7 +153,7 @@ describe.skipIf(!testDatabaseUrl)('identity module (Postgres)', () => {
     const r = await inviteUser(noMail, admin, {
       email: 'no-mail@example.com',
       fullName: 'No Mail',
-      roles: [{ role: 'brand_specialist', scopeType: 'global', scopeId: null }],
+      roles: [{ role: 'reviewer', scopeType: 'global', scopeId: null }],
     });
     expect(r.manualLink).toMatch(/\/auth\/confirm\?/);
     const resent = await resendInvite(noMail, admin, r.user.id);
@@ -158,7 +165,7 @@ describe.skipIf(!testDatabaseUrl)('identity module (Postgres)', () => {
       inviteUser(deps, admin, {
         email: 'CHECKER.ONE@example.com',
         fullName: 'Dup',
-        roles: [{ role: 'category_drafter', scopeType: 'global', scopeId: null }],
+        roles: [{ role: 'category_manager', scopeType: 'global', scopeId: null }],
       }),
     ).rejects.toThrow(/already exists/);
   });
@@ -170,20 +177,20 @@ describe.skipIf(!testDatabaseUrl)('identity module (Postgres)', () => {
         fullName: 'Sod',
         roles: [
           { role: 'auditor', scopeType: 'global', scopeId: null },
-          { role: 'template_manager', scopeType: 'global', scopeId: null },
+          { role: 'approver', scopeType: 'global', scopeId: null },
         ],
       }),
     ).rejects.toThrow(/separation of duties/);
   });
 
   it('only platform admins can invite', async () => {
-    const [checker] = await listUsers(deps, admin, { q: 'category-checker@' });
+    const [checker] = await listUsers(deps, admin, { q: 'category-manager@' });
     const checkerCtx = await ctxFor(checker!.id);
     await expect(
       inviteUser(deps, checkerCtx, {
         email: 'nope@example.com',
         fullName: 'Nope',
-        roles: [{ role: 'category_drafter', scopeType: 'global', scopeId: null }],
+        roles: [{ role: 'category_manager', scopeType: 'global', scopeId: null }],
       }),
     ).rejects.toSatisfy((e) => isAppError(e) && e.code === 'FORBIDDEN');
     await expect(listUsers(deps, checkerCtx)).rejects.toSatisfy((e) => isAppError(e) && e.code === 'FORBIDDEN');
@@ -200,21 +207,21 @@ describe.skipIf(!testDatabaseUrl)('identity module (Postgres)', () => {
 
   it('grants and revokes roles; changes are visible on the next session load', async () => {
     const [u] = await listUsers(deps, admin, { q: 'checker.one' });
-    await grantRole(deps, admin, u!.id, { role: 'template_manager', scopeType: 'global', scopeId: null });
+    await grantRole(deps, admin, u!.id, { role: 'approver', scopeType: 'global', scopeId: null });
     let s = await loadSession(t.db, u!.id);
-    expect(s!.grants.map((g) => g.role).sort()).toEqual(['category_checker', 'template_manager']);
+    expect(s!.grants.map((g) => g.role).sort()).toEqual(['approver', 'category_manager']);
 
     await expect(
       grantRole(deps, admin, u!.id, { role: 'auditor', scopeType: 'global', scopeId: null }),
     ).rejects.toThrow(/separation of duties/);
     await expect(
-      grantRole(deps, admin, u!.id, { role: 'template_manager', scopeType: 'global', scopeId: null }),
+      grantRole(deps, admin, u!.id, { role: 'approver', scopeType: 'global', scopeId: null }),
     ).rejects.toThrow(/already has/);
 
-    const tm = (await getUser(deps, admin, u!.id)).grants.find((g) => g.role === 'template_manager')!;
+    const tm = (await getUser(deps, admin, u!.id)).grants.find((g) => g.role === 'approver')!;
     await revokeRole(deps, admin, u!.id, tm.id);
     s = await loadSession(t.db, u!.id);
-    expect(s!.grants.map((g) => g.role)).toEqual(['category_checker']);
+    expect(s!.grants.map((g) => g.role)).toEqual(['category_manager']);
 
     const audit = await listAuditEvents(t.db, admin.ability, { subjectId: u!.id, action: 'role.' });
     expect(audit.items.map((e) => e.action)).toEqual(['role.revoked', 'role.granted', 'role.granted']);
@@ -232,7 +239,7 @@ describe.skipIf(!testDatabaseUrl)('identity module (Postgres)', () => {
     expect(off.status).toBe('deactivated');
     expect(authFake.banned.has(u!.id)).toBe(true);
     await expect(
-      grantRole(deps, admin, u!.id, { role: 'category_drafter', scopeType: 'global', scopeId: null }),
+      grantRole(deps, admin, u!.id, { role: 'category_manager', scopeType: 'global', scopeId: null }),
     ).rejects.toThrow(/Reactivate/);
     const on = await setUserActive(deps, admin, u!.id, true);
     expect(on.status).toBe('active');
@@ -240,7 +247,7 @@ describe.skipIf(!testDatabaseUrl)('identity module (Postgres)', () => {
   });
 
   it('rolls back the status change if Supabase fails', async () => {
-    const [u] = await listUsers(deps, admin, { q: 'brand-specialist@' });
+    const [u] = await listUsers(deps, admin, { q: 'reviewer@' });
     const failing = { ...deps, auth: { ...deps.auth, setBanned: async () => Promise.reject(new Error('supabase down')) } };
     await expect(setUserActive(failing, admin, u!.id, false)).rejects.toThrow('supabase down');
     expect((await getUser(deps, admin, u!.id)).status).toBe('active');
@@ -249,7 +256,7 @@ describe.skipIf(!testDatabaseUrl)('identity module (Postgres)', () => {
   it('counts members per role', async () => {
     const counts = await roleMemberCounts(deps, admin);
     expect(counts.platform_admin).toBe(1);
-    expect(counts.category_checker).toBe(2); // demo + Chandra
+    expect(counts.category_manager).toBe(2); // demo + Chandra
     expect(counts.brand_owner).toBe(0);
   });
 
@@ -290,5 +297,67 @@ describe.skipIf(!testDatabaseUrl)('identity module (Postgres)', () => {
     const noGrants: Grant[] = [];
     const nobody = defineAbilityFor({ userId: randomUUID(), grants: noGrants });
     await expect(listAuditEvents(t.db, nobody)).rejects.toSatisfy((e) => isAppError(e) && e.code === 'FORBIDDEN');
+  });
+
+  it('marks only demo accounts as demo', async () => {
+    const all = await listUsers(deps, admin);
+    expect(all.filter((u) => u.isDemo).map((u) => u.email).sort()).toEqual([
+      'approver@example.com',
+      'category-manager@example.com',
+      'oem-seller@example.com',
+      'reviewer@example.com',
+      'seller@example.com',
+    ]);
+    expect(all.find((u) => u.email === 'admin@example.com')!.isDemo).toBe(false);
+  });
+
+  it('lets an admin set a demo password, never a real user password', async () => {
+    const [demo] = await listUsers(deps, admin, { q: 'reviewer@' });
+    await setDemoPassword(deps, admin, demo!.id, 'NewDemoPass99');
+    expect(authFake.passwords.get(demo!.id)).toBe('NewDemoPass99');
+    const [real] = await listUsers(deps, admin, { q: 'checker.one' });
+    await expect(setDemoPassword(deps, admin, real!.id, 'NewDemoPass99')).rejects.toThrow(/only be set for demo/);
+    await expect(setDemoPassword(deps, admin, demo!.id, 'short')).rejects.toThrow();
+    const audit = await listAuditEvents(t.db, admin.ability, { subjectId: demo!.id, action: 'user.password_set' });
+    expect(audit.items).toHaveLength(1);
+    expect(JSON.stringify(audit.items[0])).not.toContain('NewDemoPass99');
+  });
+
+  it('only platform admins manage demo accounts', async () => {
+    const [cm] = await listUsers(deps, admin, { q: 'category-manager@' });
+    const cmCtx = await ctxFor(cm!.id);
+    await expect(setAllDemoPasswords(deps, cmCtx, 'NewDemoPass99')).rejects.toSatisfy((e) => isAppError(e) && e.code === 'FORBIDDEN');
+    await expect(rebuildDemoTeam(deps, cmCtx, { password: 'NewDemoPass99' })).rejects.toSatisfy((e) => isAppError(e) && e.code === 'FORBIDDEN');
+  });
+
+  it('sets one password on every demo account', async () => {
+    expect(await setAllDemoPasswords(deps, admin, 'TeamPass2026')).toBe(5);
+    const demo = (await listUsers(deps, admin)).filter((u) => u.isDemo);
+    expect(demo.every((u) => authFake.passwords.get(u.id) === 'TeamPass2026')).toBe(true);
+  });
+
+  it('rebuilds the demo team without touching real accounts', async () => {
+    const before = await listUsers(deps, admin);
+    const realBefore = before.filter((u) => !u.isDemo).map((u) => u.id).sort();
+    const oldDemoIds = before.filter((u) => u.isDemo).map((u) => u.id);
+
+    await expect(rebuildDemoTeam(deps, admin, { password: 'Rebuilt12345', emailDomain: 'example.com' })).resolves.toHaveLength(5);
+    const after = await listUsers(deps, admin);
+    expect(after.filter((u) => !u.isDemo).map((u) => u.id).sort()).toEqual(realBefore);
+    const demo = after.filter((u) => u.isDemo);
+    expect(demo).toHaveLength(5);
+    expect(demo.some((u) => oldDemoIds.includes(u.id))).toBe(false);
+    expect(oldDemoIds.every((id) => authFake.deleted.includes(id))).toBe(true);
+    const removed = await listAuditEvents(t.db, admin.ability, { action: 'user.demo_removed' });
+    expect(removed.items).toHaveLength(5); // trail of the removed accounts is kept
+
+    // a real account on a demo address blocks the rebuild before anything is deleted
+    await inviteUser(deps, admin, {
+      email: 'approver@demo.test',
+      fullName: 'Real Approver',
+      roles: [{ role: 'approver', scopeType: 'global', scopeId: null }],
+    });
+    await expect(rebuildDemoTeam(deps, admin, { password: 'Rebuilt12345', emailDomain: 'demo.test' })).rejects.toThrow(/real account/);
+    expect((await listUsers(deps, admin)).filter((u) => u.isDemo)).toHaveLength(5);
   });
 });

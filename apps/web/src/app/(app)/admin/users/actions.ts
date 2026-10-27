@@ -1,14 +1,18 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { ZodError } from 'zod';
 import { ROLES, isRoleKey, type Grant, type RoleKey } from '@orbita/authz';
 import { isAppError } from '@orbita/domain';
 import {
   DEMO_ORG_ID,
   grantRole,
   inviteUser,
+  rebuildDemoTeam,
   resendInvite,
   revokeRole,
+  setAllDemoPasswords,
+  setDemoPassword,
   setUserActive,
 } from '@orbita/identity';
 import type { ActionState } from '@/lib/action-state';
@@ -39,6 +43,7 @@ async function run(fn: () => Promise<ActionState>): Promise<ActionState> {
     return result;
   } catch (err) {
     if (isAppError(err)) return { status: 'error', message: err.message, fieldErrors: undefined };
+    if (err instanceof ZodError) return { status: 'error', message: err.issues[0]?.message ?? 'Check the input.' };
     log.error('admin.action_failed', { err });
     return { status: 'error', message: 'Something went wrong. Please try again.' };
   }
@@ -92,5 +97,29 @@ export async function resendInviteAction(userId: string): Promise<ActionState> {
       message: r.manualLink ? 'New link created. Email is not configured, so share it below.' : 'Invite re-sent.',
       data: { manualLink: r.manualLink },
     };
+  });
+}
+
+export async function setDemoPasswordAction(userId: string, password: string): Promise<ActionState> {
+  return run(async () => {
+    await setDemoPassword(identityDeps(), await ctx(), userId, password);
+    return { status: 'ok', message: 'Password set. Share it with whoever uses this demo account.' };
+  });
+}
+
+export async function setAllDemoPasswordsAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  return run(async () => {
+    const n = await setAllDemoPasswords(identityDeps(), await ctx(), String(form.get('password') ?? ''));
+    return { status: 'ok', message: `Password set on ${n} demo account${n === 1 ? '' : 's'}.` };
+  });
+}
+
+export async function rebuildDemoTeamAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  return run(async () => {
+    const team = await rebuildDemoTeam(identityDeps(), await ctx(), {
+      password: String(form.get('password') ?? ''),
+      emailDomain: String(form.get('emailDomain') || 'example.com'),
+    });
+    return { status: 'ok', message: `Demo team rebuilt: ${team.length} accounts.`, data: { team } };
   });
 }

@@ -39,11 +39,12 @@ describe.skipIf(!testDatabaseUrl)('migrations after Supabase already applied the
         await sql.unsafe(readFileSync(path.join(folder, f), 'utf8'));
         await sql`insert into supabase_migrations.schema_migrations values (${f.split('_')[0]!})`;
       }
-      expect(await baselineFromSupabase(sql, folder)).toBe(2);
+      const total = readdirSync(folder).filter((x) => x.endsWith('.sql')).length;
+      expect(await baselineFromSupabase(sql, folder)).toBe(total);
       await migrate(drizzle(sql), { migrationsFolder: folder }); // would fail with "already exists" without the baseline
       expect(await baselineFromSupabase(sql, folder)).toBe(0); // idempotent
       const rows = await sql<{ n: number }[]>`select count(*)::int as n from drizzle.__drizzle_migrations`;
-      expect(rows[0]?.n).toBe(2);
+      expect(rows[0]?.n).toBe(total);
     } finally {
       await sql.end();
     }

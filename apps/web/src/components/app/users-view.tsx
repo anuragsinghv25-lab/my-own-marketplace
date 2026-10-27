@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useMemo, useState, useTransition } from 'react';
-import { Copy, MailPlus, Plus, Search, ShieldOff, UserCheck, UserPlus, Users, X } from 'lucide-react';
+import { Copy, FlaskConical, KeyRound, MailPlus, Plus, RefreshCw, Search, ShieldOff, UserCheck, UserPlus, Users, X } from 'lucide-react';
 import {
   Avatar,
   Badge,
@@ -26,9 +26,12 @@ import {
 import {
   grantRoleAction,
   inviteUserAction,
+  rebuildDemoTeamAction,
   resendInviteAction,
   revokeRoleAction,
   setActiveAction,
+  setAllDemoPasswordsAction,
+  setDemoPasswordAction,
 } from '@/app/(app)/admin/users/actions';
 import { idle, type ActionState } from '@/lib/action-state';
 import { formatDateTime, timeAgo } from '@/lib/format';
@@ -57,6 +60,7 @@ export interface UserRow {
   fullName: string;
   kind: 'staff' | 'seller';
   status: 'invited' | 'active' | 'deactivated';
+  isDemo: boolean;
   invitedAt: string | null;
   activatedAt: string | null;
   lastSeenAt: string | null;
@@ -88,6 +92,7 @@ export function UsersView({
   canManage,
   emailConfigured,
   currentUserId,
+  demoCount,
 }: {
   users: UserRow[];
   roles: RoleOption[];
@@ -95,12 +100,15 @@ export function UsersView({
   canManage: boolean;
   emailConfigured: boolean;
   currentUserId: string;
+  /** demo accounts in the whole system (not just the filtered list) */
+  demoCount: number;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = users.find((u) => u.id === selectedId) ?? null;
 
   return (
     <>
+      {canManage ? <DemoAccountsPanel count={demoCount} /> : null}
       <Card>
         <form className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-line" role="search">
           <div className="relative flex-1 min-w-[220px]">
@@ -147,6 +155,11 @@ export function UsersView({
                         <span className="block font-medium truncate">
                           {u.fullName || '—'}
                           {u.id === currentUserId ? <span className="text-mute font-normal"> (you)</span> : null}
+                          {u.isDemo ? (
+                            <Badge tone="ai" className="ml-1.5 px-2 py-0 text-[10px] align-middle">
+                              Demo
+                            </Badge>
+                          ) : null}
                         </span>
                         <span className="block text-xs text-mute truncate">{u.email}</span>
                       </span>
@@ -406,6 +419,8 @@ function UserDrawer({
           </div>
         </div>
 
+        {user.isDemo && canManage ? <DemoPasswordForm userId={user.id} email={user.email} /> : null}
+
         {user.status === 'invited' && canManage ? (
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3 rounded-xl bg-warn/10 px-4 py-3 text-sm">
@@ -478,5 +493,136 @@ function UserDrawer({
         </section>
       </div>
     </Drawer>
+  );
+}
+
+/* ---------------------------------------------------------------- demo accounts */
+
+function DemoPasswordForm({ userId, email }: { userId: string; email: string }) {
+  const [password, setPassword] = useState('');
+  const [pending, start] = useTransition();
+  return (
+    <section className="rounded-xl border border-ai/30 bg-ai/[.05] p-4">
+      <div className="flex items-center gap-2 text-sm font-semibold">
+        <KeyRound size={15} className="text-ai" /> Set password
+      </div>
+      <p className="text-xs text-mute mt-0.5 mb-3">
+        Demo account: you can set its password directly. Real accounts always reset their own.
+      </p>
+      <form
+        className="flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          start(async () => {
+            const s = await setDemoPasswordAction(userId, password);
+            notify(s);
+            if (s.status === 'ok') setPassword('');
+          });
+        }}
+      >
+        <Input
+          type="text"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="New password"
+          autoComplete="off"
+          aria-label={`New password for ${email}`}
+          className="h-10"
+        />
+        <Button type="submit" variant="secondary" loading={pending} disabled={password.length < 10}>
+          Set
+        </Button>
+      </form>
+      <p className="text-[11px] text-mute mt-1.5">At least 10 characters, with a letter and a number.</p>
+    </section>
+  );
+}
+
+function DemoAccountsPanel({ count }: { count: number }) {
+  const [pwState, pwAction, pwPending] = useActionState(async (prev: ActionState, form: FormData) => {
+    const s = await setAllDemoPasswordsAction(prev, form);
+    notify(s);
+    return s;
+  }, idle);
+  const [rebuildOpen, setRebuildOpen] = useState(false);
+  const [rbState, rbAction, rbPending] = useActionState(async (prev: ActionState, form: FormData) => {
+    const s = await rebuildDemoTeamAction(prev, form);
+    notify(s);
+    if (s.status === 'ok') setRebuildOpen(false);
+    return s;
+  }, idle);
+
+  return (
+    <Card className="mb-4 p-5">
+      <div className="flex flex-wrap items-start gap-4">
+        <span className="h-11 w-11 rounded-2xl bg-ai/10 text-ai grid place-items-center shrink-0">
+          <FlaskConical size={20} />
+        </span>
+        <div className="flex-1 min-w-[240px]">
+          <div className="font-semibold">Demo accounts</div>
+          <p className="text-sm text-mute mt-0.5">
+            {count
+              ? `${count} demo account${count === 1 ? '' : 's'} for walking through the flows. Give them one shared password, or rebuild the team.`
+              : 'No demo accounts. Create the demo team to walk through every flow.'}
+          </p>
+          {count ? (
+            <form action={pwAction} className="mt-3 flex flex-wrap gap-2">
+              <Input
+                name="password"
+                type="text"
+                placeholder="Password for all demo accounts"
+                autoComplete="off"
+                aria-label="Password for all demo accounts"
+                className="h-10 max-w-xs"
+                required
+                minLength={10}
+              />
+              <Button type="submit" variant="secondary" loading={pwPending}>
+                <KeyRound size={15} /> Set for all
+              </Button>
+            </form>
+          ) : null}
+          {pwState.status === 'error' ? <p className="mt-1.5 text-xs text-bad">{pwState.message}</p> : null}
+        </div>
+        <Dialog
+          open={rebuildOpen}
+          onOpenChange={setRebuildOpen}
+          trigger={
+            <Button variant="ghost">
+              <RefreshCw size={15} /> {count ? 'Rebuild demo team' : 'Create demo team'}
+            </Button>
+          }
+          title={count ? 'Rebuild the demo team' : 'Create the demo team'}
+          description="Removes every demo account and creates five fresh ones. Real accounts are not touched; the audit trail is kept."
+        >
+          <form action={rbAction} className="space-y-4">
+            <ul className="rounded-xl bg-soft p-3.5 text-xs text-mute space-y-1">
+              <li><code className="text-ink">category-manager@</code> builds and submits categories</li>
+              <li><code className="text-ink">approver@</code> approves categories and escalated cases</li>
+              <li><code className="text-ink">reviewer@</code> reviews vendors, brands and catalogs</li>
+              <li><code className="text-ink">seller@</code> a reseller organisation</li>
+              <li><code className="text-ink">oem-seller@</code> a brand-owning (OEM) organisation</li>
+            </ul>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <Field label="Password for all five" htmlFor="rb-pw" hint="At least 10 characters, a letter and a number.">
+                <Input id="rb-pw" name="password" type="text" autoComplete="off" required minLength={10} />
+              </Field>
+              <Field label="Email domain" htmlFor="rb-domain">
+                <Input id="rb-domain" name="emailDomain" defaultValue="example.com" />
+              </Field>
+            </div>
+            {rbState.status === 'error' ? <div className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{rbState.message}</div> : null}
+            <div className="flex justify-end gap-2 border-t border-line pt-4">
+              <Button variant="ghost" onClick={() => setRebuildOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={rbPending}>
+                <RefreshCw size={15} /> {count ? 'Rebuild' : 'Create'}
+              </Button>
+            </div>
+          </form>
+        </Dialog>
+      </div>
+    </Card>
   );
 }

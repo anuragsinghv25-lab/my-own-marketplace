@@ -147,7 +147,7 @@ export function Gallery({ previewSections }: { previewSections: NavSection[] }) 
         <Card className="p-5 space-y-4">
           <div className="flex flex-wrap gap-2">
             <Badge>Neutral</Badge>
-            <Badge tone="accent">Category checker</Badge>
+            <Badge tone="accent">Category manager</Badge>
             <Badge tone="ok">Approved</Badge>
             <Badge tone="warn">Needs attention</Badge>
             <Badge tone="bad">Rejected</Badge>
@@ -249,14 +249,14 @@ export function Gallery({ previewSections }: { previewSections: NavSection[] }) 
 
       <Section id="shell" title="App shell">
         <p className="text-sm text-mute mb-3">
-          The real shell, rendered with a sample category checker. Menus are generated from the signed-in user&apos;s
+          The real shell, rendered with a sample category manager. Menus are generated from the signed-in user&apos;s
           roles.
         </p>
         <div className="overflow-hidden rounded-2xl border border-line shadow-lift [&_header]:!static [&_aside]:!static [&_aside]:!h-auto [&_main]:!py-6">
           <AppShell
             preview
             marketplace="Orbita"
-            user={{ name: 'Asha Rao', email: 'asha@example.com', roleLabels: ['Category checker'] }}
+            user={{ name: 'Asha Rao', email: 'asha@example.com', roleLabels: ['Category manager'] }}
             sections={previewSections}
           >
             <div className="text-2xl font-semibold tracking-tight">Welcome, Asha</div>

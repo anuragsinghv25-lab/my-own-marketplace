@@ -77,6 +77,7 @@ export interface UserView {
   fullName: string;
   kind: Profile['kind'];
   status: Profile['status'];
+  isDemo: boolean;
   invitedAt: Date | null;
   activatedAt: Date | null;
   lastSeenAt: Date | null;
@@ -141,6 +142,7 @@ const toView = (p: Profile, grants: GrantView[]): UserView => ({
   fullName: p.fullName,
   kind: p.kind,
   status: p.status,
+  isDemo: p.isDemo,
   invitedAt: p.invitedAt,
   activatedAt: p.activatedAt,
   lastSeenAt: p.lastSeenAt,
@@ -478,10 +480,7 @@ export const bootstrapInputSchema = z.object({
     password: z.string().min(10, 'Use at least 10 characters'),
   }),
   demo: z
-    .object({
-      password: z.string().min(10, 'Use at least 10 characters'),
-      emailDomain: z.string().trim().min(3).default('example.com'),
-    })
+    .object({ password: z.string(), emailDomain: z.string().optional() })
     .nullable()
     .default(null),
 });
@@ -491,69 +490,239 @@ export async function needsBootstrap(db: DbOrTx): Promise<boolean> {
   return (await activePlatformAdminIds(db)).length === 0;
 }
 
-const DEMO_ROLES: { role: RoleKey; name: string; kind: 'staff' | 'seller' }[] = ROLE_KEYS.filter(
-  (r) => r !== 'platform_admin' && ROLES[r].assignable,
-).map((r) => ({ role: r, name: `Demo ${ROLES[r].label}`, kind: ROLES[r].side === 'seller' ? 'seller' : 'staff' }));
-
-/** Demo seller organisation id, used as the scope of seller roles until R4 adds real organisations. */
+/** Demo seller organisation ids, used as the scope of seller roles until R4 adds real organisations. */
 export const DEMO_ORG_ID = '00000000-0000-4000-8000-0000000000d1';
+export const DEMO_OEM_ORG_ID = '00000000-0000-4000-8000-0000000000d2';
+
+export interface DemoAccount {
+  /** email local part */
+  slug: string;
+  name: string;
+  kind: 'staff' | 'seller';
+  grant: Grant;
+  purpose: string;
+}
 
 /**
- * Creates the first platform admin (and optionally one demo user per role).
+ * The smallest team that can walk every flow end to end (the platform admin is the person
+ * who ran setup). Auditor and seller staff exist as roles but are not seeded.
+ */
+export const DEMO_TEAM: readonly DemoAccount[] = [
+  {
+    slug: 'category-manager',
+    name: 'Demo Category Manager',
+    kind: 'staff',
+    grant: { role: 'category_manager', scopeType: 'global', scopeId: null },
+    purpose: 'Builds categories and submits versions for approval',
+  },
+  {
+    slug: 'approver',
+    name: 'Demo Approver',
+    kind: 'staff',
+    grant: { role: 'approver', scopeType: 'global', scopeId: null },
+    purpose: 'Approves category versions and decides escalated cases',
+  },
+  {
+    slug: 'reviewer',
+    name: 'Demo Reviewer',
+    kind: 'staff',
+    grant: { role: 'reviewer', scopeType: 'global', scopeId: null },
+    purpose: 'Reviews vendor assessments, brand requests and catalogs',
+  },
+  {
+    slug: 'seller',
+    name: 'Demo Seller (reseller)',
+    kind: 'seller',
+    grant: { role: 'seller_admin', scopeType: 'org', scopeId: DEMO_ORG_ID },
+    purpose: 'Requests brands and lists catalogs as a reseller',
+  },
+  {
+    slug: 'oem-seller',
+    name: 'Demo OEM Seller',
+    kind: 'seller',
+    grant: { role: 'seller_admin', scopeType: 'org', scopeId: DEMO_OEM_ORG_ID },
+    purpose: 'Owns a brand: lists its own catalogs and approves resellers (brand ownership arrives in R4)',
+  },
+];
+
+export const demoPasswordSchema = z
+  .string()
+  .min(10, 'Use at least 10 characters')
+  .max(128)
+  .regex(/[a-zA-Z]/, 'Include at least one letter')
+  .regex(/[0-9]/, 'Include at least one number');
+
+export const demoTeamInputSchema = z.object({
+  password: demoPasswordSchema,
+  emailDomain: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9-]+(\.[a-z0-9-]+)+$/, 'Enter a domain like example.com')
+    .default('example.com'),
+});
+export type DemoTeamInput = z.input<typeof demoTeamInputSchema>;
+
+/** Creates an active user with a password and one grant, audited, in one transaction. */
+async function createActiveUser(
+  deps: Pick<IdentityDeps, 'db' | 'auth'>,
+  who: { actor: Actor | null; meta: RequestMeta },
+  u: { email: string; password: string; fullName: string; kind: 'staff' | 'seller'; grant: Grant; isDemo: boolean },
+): Promise<string> {
+  const { userId } = await deps.auth.createWithPassword(u.email, u.password, u.fullName);
+  try {
+    await deps.db.transaction(async (tx) => {
+      const now = new Date();
+      await tx.insert(profiles).values({
+        id: userId,
+        email: u.email,
+        fullName: u.fullName,
+        kind: u.kind,
+        status: 'active',
+        isDemo: u.isDemo,
+        invitedBy: who.actor?.id ?? null,
+        invitedAt: now,
+        activatedAt: now,
+      });
+      await tx.insert(roleGrants).values({ userId, ...u.grant, grantedBy: who.actor?.id ?? null });
+      await recordAudit(tx, who, {
+        action: 'user.seeded',
+        subjectType: 'user',
+        subjectId: userId,
+        summary: `${who.actor ? who.actor.email : 'Setup'} created ${u.isDemo ? 'demo account ' : ''}${u.email} as ${ROLES[u.grant.role].label}`,
+        after: { email: u.email, role: u.grant.role, scopeType: u.grant.scopeType, isDemo: u.isDemo },
+      });
+    });
+  } catch (err) {
+    await deps.auth.delete(userId).catch(() => {});
+    throw err;
+  }
+  return userId;
+}
+
+async function createDemoTeam(
+  deps: Pick<IdentityDeps, 'db' | 'auth'>,
+  who: { actor: Actor | null; meta: RequestMeta },
+  input: z.output<typeof demoTeamInputSchema>,
+) {
+  const created: { id: string; email: string; role: RoleKey; purpose: string }[] = [];
+  try {
+    for (const d of DEMO_TEAM) {
+      const email = `${d.slug}@${input.emailDomain}`;
+      const id = await createActiveUser(deps, who, {
+        email,
+        password: input.password,
+        fullName: d.name,
+        kind: d.kind,
+        grant: d.grant,
+        isDemo: true,
+      });
+      created.push({ id, email, role: d.grant.role, purpose: d.purpose });
+    }
+  } catch (err) {
+    for (const c of created.reverse()) await deps.auth.delete(c.id).catch(() => {});
+    throw err;
+  }
+  return created.map(({ email, role, purpose }) => ({ email, role, purpose }));
+}
+
+/**
+ * Creates the first platform admin (and optionally the demo team).
  * Refuses to run once any platform admin exists.
  */
 export async function bootstrapPlatform(
   deps: Pick<IdentityDeps, 'db' | 'auth'>,
   meta: RequestMeta,
   raw: BootstrapInput,
-): Promise<{ adminId: string; demoUsers: { email: string; role: RoleKey }[] }> {
+): Promise<{ adminId: string; demoUsers: { email: string; role: RoleKey; purpose: string }[] }> {
   const input = bootstrapInputSchema.parse(raw);
   if (!(await needsBootstrap(deps.db))) throw preconditionFailed('Setup has already been completed.');
-
-  const created: string[] = [];
-  const make = async (email: string, password: string, fullName: string, kind: 'staff' | 'seller', grant: Grant) => {
-    const { userId } = await deps.auth.createWithPassword(email, password, fullName);
-    created.push(userId);
-    await deps.db.transaction(async (tx) => {
-      const now = new Date();
-      await tx
-        .insert(profiles)
-        .values({ id: userId, email, fullName, kind, status: 'active', invitedAt: now, activatedAt: now });
-      await tx.insert(roleGrants).values({ userId, ...grant });
-      await recordAudit(tx, { actor: null, meta }, {
-        action: 'user.seeded',
-        subjectType: 'user',
-        subjectId: userId,
-        summary: `Setup created ${email} as ${ROLES[grant.role].label}`,
-        after: { email, role: grant.role, scopeType: grant.scopeType },
-      });
-    });
-    return userId;
-  };
-
+  const who = { actor: null, meta };
+  const adminId = await createActiveUser(deps, who, {
+    email: input.admin.email,
+    password: input.admin.password,
+    fullName: input.admin.fullName,
+    kind: 'staff',
+    grant: { role: 'platform_admin', scopeType: 'global', scopeId: null },
+    isDemo: false,
+  });
+  if (!input.demo) return { adminId, demoUsers: [] };
   try {
-    const adminId = await make(input.admin.email, input.admin.password, input.admin.fullName, 'staff', {
-      role: 'platform_admin',
-      scopeType: 'global',
-      scopeId: null,
-    });
-    const demoUsers: { email: string; role: RoleKey }[] = [];
-    if (input.demo) {
-      for (const d of DEMO_ROLES) {
-        const email = `${d.role.replace(/_/g, '-')}@${input.demo.emailDomain}`;
-        const scope = ROLES[d.role].scopes[0]!;
-        await make(email, input.demo.password, d.name, d.kind, {
-          role: d.role,
-          scopeType: scope === 'workgroup' ? 'global' : scope,
-          scopeId: scope === 'org' ? DEMO_ORG_ID : null,
-        });
-        demoUsers.push({ email, role: d.role });
-      }
-    }
-    return { adminId, demoUsers };
+    const demo = demoTeamInputSchema.parse(input.demo);
+    return { adminId, demoUsers: await createDemoTeam(deps, who, demo) };
   } catch (err) {
-    // Leave no half-created accounts behind (profiles cascade from auth.users).
-    for (const id of created.reverse()) await deps.auth.delete(id).catch(() => {});
+    await deps.auth.delete(adminId).catch(() => {});
     throw err;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Demo accounts (admin tools)
+
+async function requireDemoUser(db: DbOrTx, userId: string) {
+  const [p] = await db.select().from(profiles).where(eq(profiles.id, userId)).limit(1);
+  if (!p) throw notFound('User');
+  if (!p.isDemo) throw forbidden('Passwords can only be set for demo accounts. Real users reset their own.');
+  return p;
+}
+
+/** Sets the password of one demo account. Real accounts are never touched. */
+export async function setDemoPassword(deps: IdentityDeps, ctx: Ctx, userId: string, password: string) {
+  if (!ctx.ability.can('update', 'User')) throw forbidden('You cannot manage users.');
+  const pw = demoPasswordSchema.parse(password);
+  const p = await requireDemoUser(deps.db, userId);
+  await deps.auth.setPassword(userId, pw);
+  await recordAudit(deps.db, ctx, {
+    action: 'user.password_set',
+    subjectType: 'user',
+    subjectId: userId,
+    summary: `${ctx.actor.email} set a new password for demo account ${p.email}`,
+  });
+}
+
+/** Sets one password on every demo account. Returns how many were changed. */
+export async function setAllDemoPasswords(deps: IdentityDeps, ctx: Ctx, password: string): Promise<number> {
+  if (!ctx.ability.can('update', 'User')) throw forbidden('You cannot manage users.');
+  const pw = demoPasswordSchema.parse(password);
+  const demo = await deps.db.select().from(profiles).where(eq(profiles.isDemo, true));
+  for (const p of demo) {
+    await deps.auth.setPassword(p.id, pw);
+    await recordAudit(deps.db, ctx, {
+      action: 'user.password_set',
+      subjectType: 'user',
+      subjectId: p.id,
+      summary: `${ctx.actor.email} set a new password for demo account ${p.email}`,
+    });
+  }
+  return demo.length;
+}
+
+/**
+ * Removes every demo account and creates the current demo team. Real accounts are untouched;
+ * the audit trail of removed accounts is kept.
+ */
+export async function rebuildDemoTeam(deps: IdentityDeps, ctx: Ctx, raw: DemoTeamInput) {
+  if (!ctx.ability.can('invite', 'User') || !ctx.ability.can('deactivate', 'User') || !ctx.ability.can('grant', 'RoleGrant'))
+    throw forbidden('You cannot manage demo accounts.');
+  const input = demoTeamInputSchema.parse(raw);
+
+  const wanted = DEMO_TEAM.map((d) => `${d.slug}@${input.emailDomain}`);
+  const clash = await deps.db
+    .select({ email: profiles.email })
+    .from(profiles)
+    .where(and(inArray(sql`lower(${profiles.email})`, wanted), eq(profiles.isDemo, false)));
+  if (clash.length) throw conflict(`A real account already uses ${clash[0]!.email}. Pick another demo email domain.`);
+
+  const old = await deps.db.select().from(profiles).where(eq(profiles.isDemo, true));
+  for (const p of old) {
+    await recordAudit(deps.db, ctx, {
+      action: 'user.demo_removed',
+      subjectType: 'user',
+      subjectId: p.id,
+      summary: `${ctx.actor.email} removed demo account ${p.email}`,
+      before: { email: p.email, fullName: p.fullName },
+    });
+    await deps.auth.delete(p.id); // cascades to the profile and its grants
+  }
+  return createDemoTeam(deps, ctx, input);
 }

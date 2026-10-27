@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: 'Design system' };
 export default function DesignPage() {
   const sample = defineAbilityFor({
     userId: '00000000-0000-4000-8000-000000000000',
-    grants: [{ role: 'category_checker', scopeType: 'global', scopeId: null }],
+    grants: [{ role: 'category_manager', scopeType: 'global', scopeId: null }],
   });
   return (
     <div className="min-h-screen">

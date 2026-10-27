@@ -107,77 +107,39 @@ export function defineAbilityFor({ userId, grants }: AbilityInput): AppAbility {
       else can(action, type);
     };
 
+    const READ_CONFIG: SubjectType[] = ['AttributeLibrary', 'FlagProfile', 'Workgroup', 'CategoryNode', 'CategoryVersion'];
+
     switch (g.role) {
       case 'platform_admin':
         can('access', 'AdminConsole');
         can(['read', 'invite', 'update', 'deactivate'], 'User');
         can(['read', 'grant', 'revoke'], 'RoleGrant');
         can('read', 'AuditEvent');
+        can(['read', 'create', 'update'], ['AttributeLibrary', 'FlagProfile', 'Workgroup']);
+        can('read', ['CategoryNode', 'CategoryVersion']);
         break;
 
-      case 'template_manager':
-        can('access', 'AdminConsole');
-        can(['read', 'create', 'update'], ['AttributeLibrary', 'FlagProfile']);
-        can('read', ['Workgroup', 'CategoryNode', 'CategoryVersion']);
-        break;
-
-      case 'workgroup_manager':
-        can('access', 'AdminConsole');
-        can(['read', 'create', 'update'], 'Workgroup');
-        can('read', ['AttributeLibrary', 'FlagProfile', 'CategoryNode', 'User']);
-        break;
-
-      case 'category_creator':
+      case 'category_manager':
         can('access', 'Workbench');
-        can('read', ['AttributeLibrary', 'FlagProfile', 'Workgroup', 'CategoryNode', 'CategoryVersion']);
+        can('read', READ_CONFIG);
         allow(['create', 'update'], 'CategoryNode');
+        allow(['update', 'submit', 'assign'], 'CategoryVersion', { state: 'DRAFT' });
+        allow('update', 'CategoryVersion', { state: 'IN_REVIEW' }); // withdraw from review
         break;
 
-      case 'category_drafter':
-      case 'category_checker':
-        can('access', 'Workbench');
-        can('read', ['AttributeLibrary', 'FlagProfile', 'Workgroup', 'CategoryNode', 'CategoryVersion']);
-        allow('update', 'CategoryVersion', { state: 'DRAFT' });
-        if (g.role === 'category_checker') {
-          allow('submit', 'CategoryVersion', { state: 'DRAFT' });
-          allow('update', 'CategoryVersion', { state: 'IN_REVIEW' }); // send back
-          allow('assign', 'CategoryVersion', { state: 'DRAFT' });
-        }
-        break;
-
-      case 'category_approver':
-        can('access', 'Workbench');
-        can('read', ['AttributeLibrary', 'FlagProfile', 'Workgroup', 'CategoryNode', 'CategoryVersion']);
+      case 'approver':
+        can('access', ['Workbench', 'ReviewDesk']);
+        can('read', READ_CONFIG);
         allow('approve', 'CategoryVersion', { state: 'IN_REVIEW' });
+        can(['read', 'approve', 'assign'], ['VendorAssessment', 'BrandRequest', 'Catalog', 'Escalation']);
+        can('read', 'Offer');
         break;
 
-      case 'va_officer':
+      case 'reviewer':
         can('access', 'ReviewDesk');
-        can(['read', 'approve'], 'VendorAssessment');
-        break;
-
-      case 'brand_specialist':
-      case 'agency_manager':
-        can('access', 'ReviewDesk');
-        can(['read', 'approve'], 'BrandRequest');
-        if (g.role === 'agency_manager') can('assign', 'BrandRequest');
-        break;
-
-      case 'product_reviewer':
-        can('access', 'ReviewDesk');
-        can(['read', 'approve'], 'Catalog');
-        can('read', ['Offer', 'BrandRequest']);
-        break;
-
-      case 'marketplace_manager':
-        can('access', 'ReviewDesk');
-        can(['read', 'approve', 'assign'], 'Escalation');
-        can('read', ['BrandRequest', 'Catalog', 'VendorAssessment']);
-        break;
-
-      case 'committee_member':
-        can('access', 'ReviewDesk');
-        can(['read', 'approve'], 'Escalation');
+        can(['read', 'approve'], ['VendorAssessment', 'BrandRequest', 'Catalog']);
+        can(['read', 'create'], 'Escalation'); // escalate to an approver
+        can('read', ['Offer', 'CategoryNode', 'CategoryVersion']);
         break;
 
       case 'auditor':
@@ -188,18 +150,15 @@ export function defineAbilityFor({ userId, grants }: AbilityInput): AppAbility {
       case 'seller_admin':
         can('access', 'SellerApp');
         allow(['read', 'update'], 'SellerOrg');
-        allow('read', ['Catalog', 'Offer', 'BrandRequest']);
+        allow(['read', 'create', 'update', 'submit'], ['BrandRequest', 'Catalog', 'Offer']);
+        can('read', ['CategoryNode', 'CategoryVersion']);
         break;
 
-      case 'seller_lister':
+      case 'seller_staff':
         can('access', 'SellerApp');
-        allow(['read', 'create', 'update', 'submit'], ['Catalog', 'Offer', 'BrandRequest']);
-        break;
-
-      case 'seller_pricing':
-        can('access', 'SellerApp');
-        allow('read', 'Catalog');
-        allow(['read', 'update'], 'Offer');
+        allow('read', 'SellerOrg');
+        allow(['read', 'create', 'update', 'submit'], ['BrandRequest', 'Catalog', 'Offer']);
+        can('read', ['CategoryNode', 'CategoryVersion']);
         break;
 
       case 'brand_owner':

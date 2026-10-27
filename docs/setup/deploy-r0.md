@@ -86,13 +86,13 @@ Vercel builds the `main` branch, and the app code arrives on `main` with the R0 
 1. Open `https://<your-project>.vercel.app/setup`. Every connection should show a green tick
    (Email shows grey until step 6; that is fine).
 2. Enter the `SETUP_TOKEN`, your name, email and a password.
-3. Leave **Create demo users** ticked and choose a demo password. You get one account per role, e.g.
-   `category-checker@example.com`, `brand-specialist@example.com`, `seller-lister@example.com`.
+3. Leave **Create the demo team** ticked and choose a demo password. You get five accounts:
+   `category-manager@`, `approver@`, `reviewer@`, `seller@` and `oem-seller@example.com`.
 4. Sign in at `/login`. You land on **Admin console**.
 
 `/setup` refuses to run again once an admin exists. You can now delete `SETUP_TOKEN` from Vercel.
 
-**Try the R0 exit demo:** Admin → Users → *Invite user* → tick *Category checker* → *Send invite*. Until email is
+**Try the R0 exit demo:** Admin → Users → *Invite user* → tick *Category manager* → *Send invite*. Until email is
 connected (step 6) you get a one-time link to copy. Open it in a private window, set a password, and you land in the
 **Category workbench** with only the workbench menu. Toggle dark mode. Back as admin, open **Audit log**: the invite,
 the role grant and the activation are there.
