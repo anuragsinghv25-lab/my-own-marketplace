@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
+import { baselineFromSupabase } from '../src/baseline';
 import { migrationDatabaseUrl } from '../src/url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -26,6 +27,8 @@ async function main() {
   const sql = postgres(url, { max: 1, prepare: false, onnotice: () => {} });
   try {
     const started = Date.now();
+    const baselined = await baselineFromSupabase(sql, migrationsFolder);
+    if (baselined) console.log(`[migrate] ${baselined} migration(s) were already applied by Supabase; recorded them.`);
     await migrate(drizzle(sql), { migrationsFolder });
     console.log(`[migrate] Up to date (${Date.now() - started} ms).`);
   } finally {
