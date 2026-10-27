@@ -14,30 +14,54 @@ const nav = (role: RoleKey) => {
 const hrefs = (role: RoleKey) => nav(role).flatMap((s) => s.items.map((i) => i.href));
 
 describe('role-driven navigation', () => {
-  it('every role sees exactly one area: its home', () => {
+  const areas = (role: RoleKey) => nav(role).map((s) => s.area);
+
+  it('every role sees its home area; only the approver spans two areas', () => {
     for (const role of ROLE_KEYS) {
-      expect(nav(role).map((s) => s.area), role).toEqual([ROLES[role].home]);
+      expect(areas(role), role).toContain(ROLES[role].home);
+      expect(areas(role).length, role).toBe(role === 'approver' ? 2 : 1);
     }
+    expect(areas('approver')).toEqual(['Workbench', 'ReviewDesk']);
   });
 
   it('only user administrators see Users and Roles', () => {
     for (const role of ROLE_KEYS) {
-      const seesUsers = hrefs(role).includes('/admin/users');
-      expect(seesUsers, role).toBe(role === 'platform_admin' || role === 'auditor');
+      expect(hrefs(role).includes('/admin/users'), role).toBe(role === 'platform_admin' || role === 'auditor');
     }
   });
 
-  it('a category checker sees only the workbench', () => {
-    expect(hrefs('category_checker')).toEqual(['/workbench', '/workbench/taxonomy', '/workbench/versions']);
+  it('the platform admin sees shared configuration (arriving in R1/R2)', () => {
+    expect(hrefs('platform_admin')).toEqual([
+      '/admin',
+      '/admin/users',
+      '/admin/roles',
+      '/admin/audit',
+      '/admin/attributes',
+      '/admin/workgroups',
+      '/admin/flag-profiles',
+    ]);
   });
 
-  it('approvals are shown to approvers only', () => {
-    expect(hrefs('category_approver')).toContain('/workbench/approvals');
-    expect(hrefs('category_drafter')).not.toContain('/workbench/approvals');
+  it('a category manager sees only the workbench, without approvals', () => {
+    expect(hrefs('category_manager')).toEqual(['/workbench', '/workbench/taxonomy', '/workbench/versions']);
+  });
+
+  it('approvals and escalations go to the approver', () => {
+    expect(hrefs('approver')).toContain('/workbench/approvals');
+    expect(hrefs('approver')).toContain('/reviews/escalations');
+    expect(hrefs('reviewer')).not.toContain('/workbench/approvals');
+  });
+
+  it('the reviewer sees every review queue', () => {
+    expect(hrefs('reviewer')).toEqual(['/reviews', '/reviews/vendors', '/reviews/brands', '/reviews/catalogs', '/reviews/escalations']);
   });
 
   it('the audit log is for platform admins and auditors', () => {
     const withAudit = ROLE_KEYS.filter((r) => hrefs(r).includes('/admin/audit'));
     expect(withAudit.sort()).toEqual(['auditor', 'platform_admin']);
+  });
+
+  it('a seller admin sees the whole seller app', () => {
+    expect(hrefs('seller_admin')).toEqual(['/seller', '/seller/organisation', '/seller/brands', '/seller/catalogs', '/seller/offers']);
   });
 });

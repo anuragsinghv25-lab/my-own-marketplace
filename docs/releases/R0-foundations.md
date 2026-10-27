@@ -45,7 +45,7 @@ Any category, brand or catalog data. Seller registration verification (R4). SSO 
 | --- | --- |
 | Packages | `packages/{config,ui,domain,authz,db}` and `packages/modules/{identity,audit}`. Packages ship TypeScript source; Next compiles them (`transpilePackages`). |
 | Auth emails | Invite, sign-in-link and reset emails are sent by the app through Resend using one-time links from the Supabase Admin API, so Supabase's own mailer and templates are not needed. Without Resend, admins get a copyable invite link. |
-| First admin | `/setup`, protected by `SETUP_TOKEN`, works only while no platform admin exists. It can also create one demo user per role. |
+| First admin | `/setup`, protected by `SETUP_TOKEN`, works only while no platform admin exists. It can also create the demo team (one per role in R0; five accounts since R0.1). |
 | Scopes before R1/R4 | Workgroups (R1) and seller organisations (R4) do not exist yet, so category roles are granted platform-wide and seller roles are attached to a fixed demo organisation id. The grant model already stores scope. |
 | Separation of duties | Enforced at grant time: platform admin cannot hold approval roles; auditor cannot hold any other role. Abilities also forbid approving anything you submitted or edited. |
 | Role changes | Roles are read from the database on every request, so grants and revocations apply immediately. Deactivation also bans the Supabase user. |
@@ -55,3 +55,12 @@ Any category, brand or catalog data. Seller registration verification (R4). SSO 
 | API | Contracts in `apps/web/src/server/api/contracts.ts` drive validation, the OpenAPI document (`/api/v1/openapi.json`) and a test that fails if any route lacks a contract. |
 | Design gallery | `/design` (public) instead of Storybook. |
 | Not yet | i18n plumbing, per-PR preview databases (needs Supabase branching on a paid plan), Sentry source-map upload. |
+
+## R0.1 · Fewer roles, demo tools
+
+| Change | Detail |
+| --- | --- |
+| 18 roles → 8 | Platform admin, category manager, approver, reviewer, auditor, seller admin, seller staff, brand owner. Mapping and reasoning in [02 · Roles](../architecture/02-roles-and-permissions.md). |
+| Data migration | Existing grants move to their replacement role (old grants revoked, kept as history). Template/workgroup manager grants are revoked: that work moved to the platform admin. |
+| Demo team | 5 accounts instead of 16: `category-manager@`, `approver@`, `reviewer@`, `seller@`, `oem-seller@`. |
+| Demo tools | Admin → Users: *Set password* on any demo account, *Set for all*, *Rebuild demo team*. Only accounts flagged as demo can have their password set by an admin. |

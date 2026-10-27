@@ -17,55 +17,81 @@ flowchart LR
 2. **Scope:** where they may do it. Platform-side roles are scoped to **workgroups** (a set of category subtrees). Seller-side roles are scoped to a **seller organisation** (and optionally a division), and brand-owner powers are scoped to the **brands** that organisation owns.
 3. **Conditions (ABAC):** rules on the object itself. Examples: a drafter can edit a category version only while it is `DRAFT`; the approver of a version must not be the person who submitted it; a reseller can edit only the *offer* of a paired catalog, never the product facts.
 
-## Role catalogue
+## Role catalogue (R0.1: 8 roles)
+
+R0 shipped the 18 roles of the reference process. R0.1 merged them into **8**, keeping a second person
+only where the flows need an independent check. Every category, brand and catalog step still has an owner.
 
 ### Platform side
 
-| Role | Scope | Can do |
-| --- | --- | --- |
-| `platform_admin` | Global | Users, role grants, tenants, system settings. Cannot approve business requests (separation of duties) |
-| `template_manager` | Global | Attribute library, units, value lists, Boolean pairs, flag profiles, certificate types, default limits |
-| `workgroup_manager` | Global | Create workgroups, assign category subtrees, add members |
-| `category_creator` | Workgroup | Create / rename / move category nodes, assign workgroup and checker |
-| `category_drafter` | Workgroup | Edit draft category versions (flags, specs, rules) |
-| `category_checker` | Workgroup | Everything a drafter can, plus assign drafters, review, send back, submit for approval, request classification edits |
-| `category_approver` | Workgroup | Approve, schedule go-live, send back. Never on a version they edited |
-| `va_officer` | Global or region | Review seller vendor assessments (OEM / deemed OEM status) |
-| `brand_specialist` | Review queue | Review brand requests: approve, reject, ask for info, partial approve, escalate |
-| `agency_manager` | Review queue | Everything a specialist can, plus take fresh requests, send back to specialist, revive brands |
-| `product_reviewer` | Review queue | Review catalogs (product approval) |
-| `marketplace_manager` | Global | Escalations, disputes, priority processing, policy exceptions |
-| `committee_member` | Global | Vote on special cases referred by a marketplace manager |
-| `auditor` | Global, read-only | Read audit trails and history; no writes anywhere |
+| Role | Scope | Can do | Replaces |
+| --- | --- | --- | --- |
+| `platform_admin` | Global | Users, role grants, audit, plus shared configuration: attribute library, flag profiles, workgroups. Never approves business requests. | platform admin, template manager, workgroup manager |
+| `category_manager` | Workgroup | Create and move category nodes; draft and check flags, specs and rules; submit versions for approval. | category creator, drafter, checker |
+| `approver` | Workgroup (categories) / global | Approve and schedule category versions; decide escalated vendor, brand and catalog cases; assign work; revive brands. Never on their own work. | category approver, agency manager, marketplace manager, committee member |
+| `reviewer` | Global | First-line review of vendor assessments, brand requests and catalogs: approve, reject, ask for info, escalate. | VA officer, brand specialist, product reviewer |
+| `auditor` | Global, read-only | Reads everything, writes nothing. | auditor |
 
 ### Seller side
 
-| Role | Scope | Can do |
-| --- | --- | --- |
-| `seller_admin` | Own organisation | Manage the org's users, divisions, category permissions, certificate library |
-| `seller_lister` | Own org (division) | Create, pair, clone catalogs; edit offers |
-| `seller_pricing` | Own org (division) | Edit price and stock only |
-| `brand_owner` | Brands the org owns | Owner-level catalog edits, authorise resellers, approve reseller catalogs, discontinue catalogs |
+| Role | Scope | Can do | Replaces |
+| --- | --- | --- | --- |
+| `seller_admin` | Own organisation | Organisation profile and users; brand requests, catalogs, offers, certificates. | seller admin, lister, pricing |
+| `seller_staff` | Own organisation | Brand requests, catalogs and offers; not organisation settings. | (optional sub-users) |
+| `brand_owner` | Brands the org owns | Owner-level catalog edits, authorise resellers, approve reseller catalogs. **Derived** after OEM assessment, never granted by hand. | brand owner |
 
-`brand_owner` is not assigned by hand: it is **derived** when the organisation passes vendor assessment as OEM for a brand.
+### Who does each step
+
+```mermaid
+flowchart LR
+  subgraph Category
+    CM[Category manager<br/>create · draft · submit] --> AP1[Approver<br/>approve · schedule]
+  end
+  subgraph Brand
+    S1[Seller admin<br/>request brand] --> RV1[Reviewer<br/>decide or escalate] -.escalate.-> AP2[Approver<br/>final decision]
+  end
+  subgraph Catalog
+    S2[Seller admin<br/>list catalog] --> BO[Brand owner<br/>approve reseller listing] --> RV2[Reviewer<br/>approve] -.escalate.-> AP3[Approver]
+  end
+  PA[Platform admin<br/>users · library · workgroups] -.configures.-> CM
+```
+
+### Separation of duties
+
+| Rule | Enforced by |
+| --- | --- |
+| Platform admin cannot also be approver, reviewer or auditor | grant validation |
+| Reviewer and approver are different people (escalation needs a second person) | grant validation |
+| Auditor cannot hold any other role | grant validation |
+| Nobody approves what they submitted or edited | ability conditions on every approve action |
+
+What we gave up: the separate drafter/checker pair inside one category team. The approver remains the independent
+check on every category version, and change history shows who edited what.
+
+### Demo team
+
+`/setup` (and Admin → Users → *Rebuild demo team*) creates five demo accounts besides the platform admin:
+`category-manager@`, `approver@`, `reviewer@`, `seller@` (reseller org) and `oem-seller@` (OEM org).
+Admins can set passwords for demo accounts only; real users always reset their own.
 
 ## Permission matrix (MVP)
 
-`C` create · `R` read · `U` update · `S` submit · `A` approve/decide · `—` none. Conditions in the notes column.
+`C` create · `R` read · `U` update · `S` submit · `A` approve/decide · `—` none.
 
-| Object \ Role | template_mgr | wg_mgr | cat_creator | drafter | checker | approver | specialist | agency_mgr | product_reviewer | seller_lister | brand_owner |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Attribute library | CRU | R | R | R | R | R | — | — | — | — | — |
-| Flag profiles | CRU | R | R | R | R | R | — | — | — | — | — |
-| Workgroup | R | CRU | R | R | R | R | — | — | — | — | — |
-| Category node | R | R | CRU | R | R | R | R | R | R | R | R |
-| Category version (draft) | R | — | R | RU | RUS | R | — | — | — | — | — |
-| Category version (in review) | R | — | R | R | RU (send back) | RA | — | — | — | — | — |
-| Category version (published) | R | R | R | R | R | R | R | R | R | R | R |
-| Brand request | — | — | — | — | — | — | RA | RA | R | CRS (own) | CRS (own) |
-| Catalog (product facts) | — | — | — | — | — | — | — | — | RA | CRUS (owner only) | CRUS + A (reseller catalogs of own brand) |
-| Offer | — | — | — | — | — | — | — | — | R | CRU (own) | CRU (own) |
-| Audit trail | R | R | R (own scope) | R (own scope) | R (own scope) | R (own scope) | R | R | R | R (own) | R (own) |
+| Object \ Role | platform_admin | category_manager | approver | reviewer | seller_admin / staff | brand_owner |
+| --- | --- | --- | --- | --- | --- | --- |
+| Users, role grants | CRU | — | — | — | — | — |
+| Attribute library, flag profiles, workgroups | CRU | R | R | — | — | — |
+| Category node | R | CRU | R | R | R | — |
+| Category version (draft) | R | RUS | R | R | — | — |
+| Category version (in review) | R | R (withdraw) | RA | R | — | — |
+| Category version (published) | R | R | R | R | R | — |
+| Vendor assessment | — | — | RA | RA | — | — |
+| Brand request | — | — | RA | RA | CRUS (own org) | — |
+| Catalog | — | — | RA | RA | CRUS (own org) | RUA (own brand) |
+| Offer | — | — | R | R | CRU (own org) | — |
+| Escalation | — | — | RA | C R | — | — |
+| Audit trail | R | — | — | — | — | — |
 
 ## Conditions worth writing down now
 

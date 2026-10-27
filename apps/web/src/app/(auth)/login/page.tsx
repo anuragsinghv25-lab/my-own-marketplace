@@ -32,7 +32,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       </div>
       {env.demoMode() ? (
         <p className="mt-6 rounded-xl bg-soft p-3.5 text-xs text-mute">
-          Demo mode: accounts are named after roles, e.g. <code className="text-ink">category-checker@example.com</code>.{' '}
+          Demo accounts: <code className="text-ink">category-manager@</code>, <code className="text-ink">approver@</code>,{' '}
+          <code className="text-ink">reviewer@</code>, <code className="text-ink">seller@</code> and{' '}
+          <code className="text-ink">oem-seller@example.com</code>.{' '}
           <Link href="/design" className="text-accent hover:underline">
             See the design system
           </Link>

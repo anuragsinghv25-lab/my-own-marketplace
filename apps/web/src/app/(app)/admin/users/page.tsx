@@ -15,7 +15,9 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const sp = await searchParams;
   const status = ['invited', 'active', 'deactivated'].includes(sp.status ?? '') ? (sp.status as 'invited') : undefined;
   const role = isRoleKey(sp.role) ? sp.role : undefined;
-  const users = await listUsers({ db: getDb() }, { ...session, meta: await requestMeta() }, { q: sp.q || undefined, status, role });
+  const ctx = { ...session, meta: await requestMeta() };
+  const users = await listUsers({ db: getDb() }, ctx, { q: sp.q || undefined, status, role });
+  const demoCount = (await listUsers({ db: getDb() }, ctx)).filter((u) => u.isDemo).length;
 
   const roleOptions: RoleOption[] = ROLE_KEYS.map((k) => ({
     key: k,
@@ -40,6 +42,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
         canManage={session.ability.can('grant', 'RoleGrant')}
         emailConfigured={configStatus().email}
         currentUserId={session.actor.id}
+        demoCount={demoCount}
       />
     </>
   );
