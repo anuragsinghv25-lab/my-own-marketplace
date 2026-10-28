@@ -2,7 +2,7 @@
 
 **Goal:** sellers create, pair or clone products against the published Category Contract, add their offer, and get them approved by the brand owner (where required) and the product reviewers. Live products appear in a read-only marketplace preview. **R5 completes the MVP.**
 
-**Depends on:** R2 (contract), R3 (publishing, review engine), R4 (sellers, brands, certificates). **Indicative size:** 4 sprints.
+**Depends on:** R1.1 (category attribute sets), R2 (contract), R3 (publishing, review engine), R4 (sellers, brands, certificates). **Indicative size:** 4–5 sprints (variants added after R1.1).
 
 ## Scope
 
@@ -13,6 +13,7 @@
 | F5.1 | Product vs offer | Product = shared facts (brand, model, specs, media, brand-level certificates), owned by the OEM where one exists, else the creating reseller. Offer = one seller's price, stock, serviceability, seller-level certificates |
 | F5.2 | Pinning | Each product pins the contract version it was validated against |
 | F5.3 | IDs | Product ID issued at creation (draft), public product code on approval; offer ID per seller; seller SKU; drafts expire after the configured lifetime with warnings |
+| F5.3a | Variants (Shopify-style) | A product can have up to 3 **options** (e.g. Color × Storage), chosen from the category's attribute set where the contract marks the spec as variant-capable. Each **variant** is one combination with its own seller SKU, offer price, stock and images; shared specs are entered once. Variants are reviewed together with their product and pair individually. (Moved here from R8 after R1.1; R8 keeps bulk variant matrices.) |
 
 ### Creating
 
@@ -57,7 +58,7 @@ Seller: Catalogs (list, draft), Create product wizard, Pair, Clone, Offer editor
 
 ## Out of scope
 
-Offer staleness and maintenance automation (R6), AI extraction (R7), bulk upload and variant families (R8), checkout.
+Offer staleness and maintenance automation (R6), AI extraction (R7), bulk upload and bulk variant matrices (R8), checkout.
 
 ## Exit demo (MVP pilot script)
 

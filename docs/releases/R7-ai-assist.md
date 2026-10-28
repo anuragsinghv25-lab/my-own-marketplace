@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | F7.1 | AI gateway | `packages/ai`: provider-agnostic calls (Vercel AI SDK / AI Gateway), per-task model choice, structured output validated against schemas, retries, cost and latency logging |
 | F7.2 | Suggestion store | `ai_suggestion` table: target, field, value, confidence, evidence (document/page/span or image), model, prompt version, human decision (accepted / edited / rejected) |
-| F7.3 | Evidence-first product creation | Seller uploads a datasheet PDF, photo or product URL; AI classifies the category (top candidates with confidence) and extracts values for the contract's `productSchema`; ≥ threshold pre-filled for one-click confirm, below threshold left for the seller |
+| F7.3 | Evidence-first product creation | Seller uploads a datasheet PDF, photo or product URL; AI classifies the category (top candidates with confidence; models already know Shopify's taxonomy, so adopted categories are matched on their standard id and path before falling back to custom ones) and extracts values for the contract's `productSchema`; ≥ threshold pre-filled for one-click confirm, below threshold left for the seller |
 | F7.4 | LoV mapping | Extracted free text mapped to the nearest allowed value; "propose new value" goes to the category team's LoV queue |
 | F7.5 | Titles & descriptions | Generated from confirmed facts and the title template; never overwrite seller text without a click |
 | F7.6 | Same-product match | Embeddings (pgvector) + model number + key specs improve "find before create" |

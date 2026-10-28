@@ -30,7 +30,7 @@
 
 | ID | Feature | Details |
 | --- | --- | --- |
-| F8.11 | Variant families | Shared specs entered once; tick variant axes (e.g. RAM × storage); generate one product per combination, each pinned and reviewed together |
+| F8.11 | Bulk variant matrices | Building on R5's variants (options from the category attribute set): generate dozens of variants at once from a matrix (e.g. 6 colours × 4 sizes), bulk-edit their prices, stock and images, and review them as one request |
 | F8.12 | Bulk create / pair | Browser grid and file upload (Excel/CSV); AI maps the seller's own column names; server-side validation against the contract; drafts submitted in bulk once clean |
 | F8.13 | Seller API | Authenticated REST API for products and offers with validate-only mode; API keys per seller org |
 

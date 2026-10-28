@@ -38,6 +38,7 @@ export interface AttributeRow {
   buyerHint: string;
   sellerHint: string;
   status: 'active' | 'deprecated';
+  source: 'custom' | 'shopify' | 'unspsc';
   valueListName: string | null;
   unitSymbol: string | null;
   dimensionName: string | null;
@@ -112,6 +113,7 @@ export function AttributesTab({
                   <button type="button" className="text-left" onClick={() => setEditing(a)}>
                     <span className="block font-medium">{a.name}</span>
                     <code className="text-[11px] text-mute">{a.code}</code>
+                    {a.source !== 'custom' ? <span className="ml-1.5 text-[11px] text-mute">· from {a.source === 'shopify' ? 'Shopify' : 'UNSPSC'}</span> : null}
                   </button>
                 </TD>
                 <TD className="text-mute">{ATTRIBUTE_TYPE_LABELS[a.dataType]}</TD>

@@ -28,6 +28,7 @@
 | F6.11 | Pairing preservation | If the product's facts did not actually change, paired offers stay paired; otherwise paired sellers re-confirm |
 | F6.12 | Cool-off enforcement | Unresolved products move to Action required, then Inactive when the cool-off ends |
 | F6.13 | Impact preview for category team | Before publishing vN+1 the checker/approver sees how many products and offers fall in each class (feeds R3's approval screen) |
+| F6.13a | Standard taxonomy upgrades | When a newer Shopify release (or UNSPSC version) is loaded, compare it with the adopted categories (matched on their standard id): renamed, moved, deprecated or merged categories and new or changed attributes and values. The category team applies changes selectively; each applied change becomes a new category version and migrates catalogs through F6.9–F6.12. Builds on R1.1's provenance (`source`, `external_id`) |
 
 ### Brand and OEM ripple
 

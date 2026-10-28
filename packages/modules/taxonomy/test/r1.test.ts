@@ -182,7 +182,7 @@ describe.skipIf(!testDatabaseUrl)('R1 · library and taxonomy (Postgres)', () =>
   it('exit demo 2: admin creates the IT Hardware workgroup covering IT & Electronics', async () => {
     const root = await createNode(deps(), globalCm, { name: 'IT & Electronics' });
     it_e = root.node.id;
-    expect(root.node.code).toBe('10');
+    expect(root.node.code).toBe('C01');
     const w = await saveWorkgroup(deps(), admin, { name: 'IT Hardware', description: 'Computers and peripherals' });
     wg = w.id;
     await assignWorkgroup(deps(), admin, it_e, wg);
@@ -192,35 +192,35 @@ describe.skipIf(!testDatabaseUrl)('R1 · library and taxonomy (Postgres)', () =>
     await expect(saveWorkgroup(deps(), admin, { name: 'it hardware' })).rejects.toThrow(/already exists/);
   });
 
-  it('exit demo 3: the workgroup manager builds down to Gaming laptops (L5) with an alias', async () => {
+  it('exit demo 3: the workgroup manager builds down to the Gaming laptops listing category with an alias', async () => {
     const wgcm = ctxOf('wgcm', [{ role: 'category_manager', scopeType: 'workgroup', scopeId: wg }]);
     laptops = (await createNode(deps(), wgcm, { parentId: it_e, name: 'Portable computers' })).node.id;
-    notebooks = (await createNode(deps(), wgcm, { parentId: laptops, name: 'Notebooks', code: '101015' })).node.id;
+    notebooks = (await createNode(deps(), wgcm, { parentId: laptops, name: 'Notebooks' })).node.id;
     const l4 = await createNode(deps(), wgcm, { parentId: notebooks, name: 'Notebook computers' });
-    expect(l4.node.code).toBe('10101510');
-    await expect(createNode(deps(), wgcm, { parentId: l4.node.id, name: 'Gaming laptops' })).rejects.toThrow(/at least one unique alias/);
-    const l5 = await createNode(deps(), wgcm, { parentId: l4.node.id, name: 'Gaming laptops', aliases: ['High Performance Gaming Laptops'] });
-    expect(l5.node.level).toBe(5);
-    expect(l5.node.code).toBe('10101510-01');
+    expect(l4.node.code).toBe('C01.01.01.01');
+    await expect(createNode(deps(), wgcm, { parentId: l4.node.id, kind: 'listing', name: 'Gaming laptops' })).rejects.toThrow(/at least one unique alias/);
+    const l5 = await createNode(deps(), wgcm, { parentId: l4.node.id, kind: 'listing', name: 'Gaming laptops', aliases: ['High Performance Gaming Laptops'] });
+    expect(l5.node).toMatchObject({ level: 5, kind: 'listing', code: 'C01.01.01.01.01' });
     expect(l5.draft).toMatchObject({ version: 0, state: 'DRAFT', assigneeId: users.wgcm });
 
     // a duplicate alias is blocked, case-insensitively, wherever it is
     await expect(
-      createNode(deps(), wgcm, { parentId: l4.node.id, name: 'Esports laptops', aliases: ['high performance gaming laptops'] }),
+      createNode(deps(), wgcm, { parentId: l4.node.id, kind: 'listing', name: 'Esports laptops', aliases: ['high performance gaming laptops'] }),
     ).rejects.toThrow(/already used by the category "Gaming laptops"/);
     // an alias may not equal another category's name either
     await expect(addAlias(deps(), wgcm, l5.node.id, 'Notebooks')).rejects.toThrow(/already used/);
     // sibling names are unique
     await expect(createNode(deps(), wgcm, { parentId: it_e, name: 'portable COMPUTERS' })).rejects.toThrow(/already exists/);
     await expect(createNode(deps(), wgcm, { parentId: l5.node.id, name: 'Too deep', aliases: ['x1'] })).rejects.toThrow(/cannot have children/);
-    await expect(createNode(deps(), wgcm, { parentId: it_e, name: 'Bad code', code: '99' })).rejects.toThrow(/10 followed by two digits/);
+    // groups are created without an alias and listing categories never sit at the top
+    await expect(createNode(deps(), globalCm, { kind: 'listing', name: 'Loose listing', aliases: ['loose'] })).rejects.toThrow(/parent group/);
   });
 
   it('exit demo 4: the workgroup category manager sees the empty draft assigned to them', async () => {
     const wgcm = ctxOf('wgcm', [{ role: 'category_manager', scopeType: 'workgroup', scopeId: wg }]);
     const drafts = await myOpenDrafts(t.db, wgcm);
     expect(drafts).toHaveLength(1);
-    expect(drafts[0]).toMatchObject({ version: 0, state: 'DRAFT', code: '10101510-01' });
+    expect(drafts[0]).toMatchObject({ version: 0, state: 'DRAFT', code: 'C01.01.01.01.01' });
     expect(drafts[0]!.path).toBe('IT & Electronics › Portable computers › Notebooks › Notebook computers › Gaming laptops');
   });
 
@@ -254,9 +254,10 @@ describe.skipIf(!testDatabaseUrl)('R1 · library and taxonomy (Postgres)', () =>
     await renameNode(deps(), globalCm, notebooks, { name: 'Notebooks & laptops' });
     await expect(setNodeStatus(deps(), globalCm, notebooks, 'inactive')).rejects.toThrow(/child categories first/);
 
-    // a family must sit under a segment
-    await expect(moveNode(deps(), globalCm, laptops, notebooks)).rejects.toThrow(/inside itself|must sit under/);
+    await expect(moveNode(deps(), globalCm, laptops, notebooks)).rejects.toThrow(/inside itself/);
     const office = tree.nodes.find((n) => n.name === 'Office supplies')!;
+    // nothing can sit under a listing category
+    await expect(moveNode(deps(), globalCm, office.id, gl.id)).rejects.toThrow(/listing category/);
     await moveNode(deps(), globalCm, laptops, office.id);
     const after = await loadTree(t.db, globalCm.ability);
     expect(after.nodes.find((n) => n.id === laptops)!.parentId).toBe(office.id);

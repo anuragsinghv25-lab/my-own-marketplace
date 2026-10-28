@@ -7,16 +7,21 @@ import {
   ChevronDown,
   ChevronRight,
   FileClock,
+  Folder,
   FolderTree,
+  Globe,
+  Hash,
   MoveRight,
   Pencil,
   Plus,
   Power,
   Search,
+  ShoppingBag,
+  Shuffle,
   Users,
   X,
 } from 'lucide-react';
-import { Badge, Button, Card, Dialog, EmptyState, Field, Input, Select, Textarea, cn } from '@orbita/ui';
+import { Badge, Button, Card, Dialog, EmptyState, Field, Input, Radio, Select, Textarea, cn } from '@orbita/ui';
 import {
   addAliasAction,
   createNodeAction,
@@ -24,18 +29,30 @@ import {
   moveNodeAction,
   removeAliasAction,
   renameNodeAction,
+  setNodeKindAction,
   setNodeStatusAction,
+  setUnspscCodeAction,
 } from '@/app/(app)/workbench/taxonomy/actions';
 import { splitList, useRunner } from '@/components/common/use-runner';
+import { AttributeSetCard } from './attribute-set';
+import { StandardPicker, type PlacementOption } from './standard-picker';
+
+export type CategoryKind = 'group' | 'listing';
+export type CategorySource = 'custom' | 'shopify' | 'unspsc';
 
 export interface ExplorerNode {
   id: string;
   parentId: string | null;
   level: number;
+  kind: CategoryKind;
   code: string;
   name: string;
   description: string;
   status: 'active' | 'inactive';
+  source: CategorySource;
+  externalId: string | null;
+  unspscCode: string | null;
+  attributeCount: number;
   workgroupId: string | null;
   effectiveWorkgroupId: string | null;
   aliases: { id: string; alias: string }[];
@@ -44,7 +61,9 @@ export interface ExplorerNode {
   canCreateChild: boolean;
 }
 
-export const LEVEL_NAMES = ['', 'Segment', 'Family', 'Class', 'Commodity', 'Listing category'];
+export const MAX_DEPTH = 8;
+const KIND_LABEL: Record<CategoryKind, string> = { group: 'Category group', listing: 'Listing category' };
+const SOURCE_LABEL: Record<CategorySource, string> = { custom: 'Custom', shopify: 'Shopify', unspsc: 'UNSPSC' };
 
 interface Match {
   id: string;
@@ -75,6 +94,7 @@ export function TaxonomyExplorer({
   const children = useMemo(() => {
     const m = new Map<string | null, ExplorerNode[]>();
     for (const n of nodes) m.set(n.parentId, [...(m.get(n.parentId) ?? []), n]);
+    for (const list of m.values()) list.sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name) : a.kind === 'group' ? -1 : 1));
     return m;
   }, [nodes]);
   const pathOf = (n: ExplorerNode) => {
@@ -86,16 +106,27 @@ export function TaxonomyExplorer({
     }
     return parts;
   };
+  const label = (n: ExplorerNode) => pathOf(n).map((p) => p.name).join(' › ');
+  const groups: PlacementOption[] = nodes
+    .filter((n) => n.kind === 'group' && n.status === 'active' && n.canCreateChild)
+    .map((n) => ({ id: n.id, label: label(n) }))
+    .sort((a, b) => a.label.localeCompare(b.label));
   const selected = selectedId ? byId.get(selectedId) ?? null : null;
 
   const [open, setOpen] = useState<Set<string>>(() => new Set(nodes.filter((n) => n.level <= 1).map((n) => n.id)));
   const [q, setQ] = useState('');
+  const [picker, setPicker] = useState<PlacementOption | 'root' | null>(null);
   const query = q.trim().toLowerCase();
   const visible = useMemo(() => {
     if (!query) return null;
     const hit = new Set<string>();
     for (const n of nodes) {
-      if (n.name.toLowerCase().includes(query) || n.code.includes(query) || n.aliases.some((a) => a.alias.toLowerCase().includes(query))) {
+      if (
+        n.name.toLowerCase().includes(query) ||
+        n.code.toLowerCase().includes(query) ||
+        (n.unspscCode ?? '').startsWith(query) ||
+        n.aliases.some((a) => a.alias.toLowerCase().includes(query))
+      ) {
         let cur: ExplorerNode | undefined = n;
         while (cur) {
           hit.add(cur.id);
@@ -124,7 +155,7 @@ export function TaxonomyExplorer({
                 selectedId === n.id ? 'bg-accent/10 text-accent' : 'hover:bg-soft',
                 n.status === 'inactive' && 'opacity-50',
               )}
-              style={{ paddingLeft: 4 + depth * 16 }}
+              style={{ paddingLeft: 4 + depth * 14 }}
             >
               <button
                 type="button"
@@ -135,8 +166,13 @@ export function TaxonomyExplorer({
                 {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
               </button>
               <button type="button" className="flex-1 min-w-0 flex items-center gap-2 py-1.5 text-left" onClick={() => select(n.id)}>
+                {n.kind === 'listing' ? <ShoppingBag size={13} className="shrink-0 text-accent" aria-label="Listing category" /> : <Folder size={13} className="shrink-0 text-mute" aria-hidden />}
                 <span className="truncate">{n.name}</span>
-                <code className="text-[10.5px] text-mute shrink-0">{n.code}</code>
+                {n.source !== 'custom' ? (
+                  <span className="shrink-0 rounded px-1 text-[9.5px] font-semibold uppercase tracking-wide bg-soft text-mute" title={`From ${SOURCE_LABEL[n.source]}`}>
+                    {n.source === 'shopify' ? 'S' : 'U'}
+                  </span>
+                ) : null}
                 {n.draft ? <span className="h-1.5 w-1.5 rounded-full bg-warn shrink-0" title={`Draft v${n.draft.version}`} /> : null}
               </button>
             </div>
@@ -146,7 +182,7 @@ export function TaxonomyExplorer({
       });
 
   return (
-    <div className="grid lg:grid-cols-[minmax(280px,360px)_1fr] gap-4 items-start">
+    <div className="grid lg:grid-cols-[minmax(280px,380px)_1fr] gap-4 items-start">
       <Card className="p-3 lg:sticky lg:top-[76px] lg:max-h-[calc(100vh-100px)] flex flex-col">
         <div className="relative mb-2">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-mute" />
@@ -160,8 +196,9 @@ export function TaxonomyExplorer({
           )}
         </div>
         {canCreateRoot ? (
-          <div className="mt-2 border-t border-line pt-2">
-            <CreateNodeButton parent={null} label="New segment (L1)" />
+          <div className="mt-2 border-t border-line pt-2 flex flex-wrap gap-2">
+            <CreateNodeButton parent={null} label="New top-level group" />
+            <Button size="sm" variant="secondary" onClick={() => setPicker('root')}><Globe size={14} /> Add from standard</Button>
           </div>
         ) : null}
       </Card>
@@ -174,18 +211,29 @@ export function TaxonomyExplorer({
           kids={children.get(selected.id) ?? []}
           wgName={wgName}
           nodes={nodes}
+          label={label}
           pathOf={pathOf}
+          canCreateRoot={canCreateRoot}
           onSelect={select}
+          onAddFromStandard={() => setPicker({ id: selected.id, label: label(selected), source: selected.source, externalId: selected.externalId, name: selected.name })}
         />
       ) : (
-        <Overview nodes={nodes} canCreateRoot={canCreateRoot} />
+        <Overview nodes={nodes} canCreateRoot={canCreateRoot} onAddFromStandard={() => setPicker('root')} />
       )}
+      {picker ? <StandardPicker under={picker === 'root' ? null : picker} groups={groups} canMirror={canCreateRoot} onClose={() => setPicker(null)} /> : null}
     </div>
   );
 }
 
-function Overview({ nodes, canCreateRoot }: { nodes: ExplorerNode[]; canCreateRoot: boolean }) {
-  const counts = [1, 2, 3, 4, 5].map((l) => nodes.filter((n) => n.level === l && n.status === 'active').length);
+function Overview({ nodes, canCreateRoot, onAddFromStandard }: { nodes: ExplorerNode[]; canCreateRoot: boolean; onAddFromStandard: () => void }) {
+  const active = nodes.filter((n) => n.status === 'active');
+  const stats = [
+    { label: 'Groups', value: active.filter((n) => n.kind === 'group').length },
+    { label: 'Listing categories', value: active.filter((n) => n.kind === 'listing').length },
+    { label: 'From Shopify', value: active.filter((n) => n.source === 'shopify').length },
+    { label: 'From UNSPSC', value: active.filter((n) => n.source === 'unspsc').length },
+    { label: 'Deepest level', value: active.reduce((m, n) => Math.max(m, n.level), 0) },
+  ];
   return (
     <Card>
       <EmptyState
@@ -193,16 +241,23 @@ function Overview({ nodes, canCreateRoot }: { nodes: ExplorerNode[]; canCreateRo
         title={nodes.length ? 'Pick a category' : 'Start the tree'}
         description={
           nodes.length
-            ? 'Select a category on the left to see its details, aliases and children.'
-            : 'Categories go from segment (L1) to family, class, commodity and finally the listing category (L5) sellers list in.'
+            ? 'Select a category on the left to see its details, attributes and subcategories.'
+            : `Groups organise the tree (up to ${MAX_DEPTH} levels); sellers list products in listing categories. Start from Shopify or UNSPSC instead of typing every level.`
         }
-        action={!nodes.length && canCreateRoot ? <CreateNodeButton parent={null} label="New segment (L1)" primary /> : undefined}
+        action={
+          !nodes.length && canCreateRoot ? (
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button onClick={onAddFromStandard}><Globe size={15} /> Add from a standard</Button>
+              <CreateNodeButton parent={null} label="New group" />
+            </div>
+          ) : undefined
+        }
       />
-      <div className="grid grid-cols-5 border-t border-line text-center">
-        {counts.map((c, i) => (
-          <div key={i} className="px-2 py-3 border-r last:border-r-0 border-line">
-            <div className="text-xl font-semibold tracking-tight">{c}</div>
-            <div className="text-[11px] text-mute">L{i + 1} · {LEVEL_NAMES[i + 1]}</div>
+      <div className="grid grid-cols-2 sm:grid-cols-5 border-t border-line text-center">
+        {stats.map((s) => (
+          <div key={s.label} className="px-2 py-3 border-r last:border-r-0 border-line">
+            <div className="text-xl font-semibold tracking-tight">{s.value}</div>
+            <div className="text-[11px] text-mute">{s.label}</div>
           </div>
         ))}
       </div>
@@ -216,21 +271,28 @@ function NodeDetail({
   kids,
   wgName,
   nodes,
+  label,
   pathOf,
+  canCreateRoot,
   onSelect,
+  onAddFromStandard,
 }: {
   node: ExplorerNode;
   path: ExplorerNode[];
   kids: ExplorerNode[];
   wgName: (id: string | null) => string | null;
   nodes: ExplorerNode[];
+  label: (n: ExplorerNode) => string;
   pathOf: (n: ExplorerNode) => ExplorerNode[];
+  canCreateRoot: boolean;
   onSelect: (id: string | null) => void;
+  onAddFromStandard: () => void;
 }) {
   const { pending, run } = useRunner();
   const [alias, setAlias] = useState('');
   const owner = wgName(node.effectiveWorkgroupId);
   const inheritedFrom = node.workgroupId ? null : path.slice(0, -1).reverse().find((p) => p.workgroupId);
+  const unspscFrom = node.unspscCode ? null : path.slice(0, -1).reverse().find((p) => p.unspscCode);
 
   return (
     <div className="space-y-4">
@@ -247,17 +309,20 @@ function NodeDetail({
           <div className="min-w-0">
             <h2 className="text-2xl font-semibold tracking-tight">{node.name}</h2>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              <Badge tone="accent">L{node.level} · {LEVEL_NAMES[node.level]}</Badge>
-              <Badge>
-                <code>{node.code}</code>
+              <Badge tone={node.kind === 'listing' ? 'accent' : 'neutral'}>
+                {node.kind === 'listing' ? <ShoppingBag size={11} /> : <Folder size={11} />} {KIND_LABEL[node.kind]}
               </Badge>
+              <Badge>Level {node.level}</Badge>
+              <Badge><code>{node.code}</code></Badge>
+              {node.source !== 'custom' ? <Badge tone="ai"><Globe size={11} /> {SOURCE_LABEL[node.source]}</Badge> : null}
               <Badge tone={node.status === 'active' ? 'ok' : 'neutral'}>{node.status === 'active' ? 'Active' : 'Inactive'}</Badge>
             </div>
           </div>
           {node.canEdit ? (
             <div className="flex flex-wrap gap-2">
               <RenameButton node={node} />
-              {node.level > 1 ? <MoveButton node={node} nodes={nodes} pathOf={pathOf} /> : null}
+              <MoveButton node={node} nodes={nodes} label={label} pathOf={pathOf} canCreateRoot={canCreateRoot} />
+              <KindButton node={node} hasChildren={kids.length > 0} />
               <Button
                 variant={node.status === 'active' ? 'danger' : 'secondary'}
                 size="sm"
@@ -271,7 +336,7 @@ function NodeDetail({
         </div>
         {node.description ? <p className="mt-3 text-sm text-mute">{node.description}</p> : null}
 
-        <div className="mt-4 grid sm:grid-cols-2 gap-3">
+        <div className="mt-4 grid sm:grid-cols-3 gap-3">
           <div className="rounded-xl bg-soft p-3.5">
             <div className="flex items-center gap-1.5 text-xs text-mute"><Users size={13} /> Workgroup</div>
             <div className="mt-1 text-sm font-medium">{owner ?? 'None yet'}</div>
@@ -279,12 +344,13 @@ function NodeDetail({
               {node.workgroupId ? 'Assigned here' : inheritedFrom ? `Inherited from ${inheritedFrom.name}` : 'A platform admin assigns workgroups.'}
             </div>
           </div>
+          <UnspscBox node={node} inheritedFrom={unspscFrom ?? null} />
           <div className="rounded-xl bg-soft p-3.5">
-            <div className="text-xs text-mute">Aliases{node.level === 5 ? ' (at least one required)' : ''}</div>
+            <div className="text-xs text-mute">Aliases{node.kind === 'listing' ? ' (at least one)' : ''}</div>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {node.aliases.length === 0 ? <span className="text-sm text-mute">None</span> : null}
               {node.aliases.map((a) => (
-                <Badge key={a.id} tone="neutral" className="gap-1.5">
+                <Badge key={a.id} tone="neutral" className="gap-1.5 bg-card">
                   {a.alias}
                   {node.canEdit ? (
                     <button type="button" aria-label={`Remove alias ${a.alias}`} onClick={() => run(() => removeAliasAction(node.id, a.id))}>
@@ -315,27 +381,36 @@ function NodeDetail({
             <div className="flex-1 min-w-[200px]">
               <span className="font-medium">Draft v{node.draft.version}</span> · {node.draft.state.toLowerCase()} · assigned to{' '}
               {node.draft.assigneeName || 'a category manager'}
-              <div className="text-xs text-mute">Configuring flags and specifications arrives in R2.</div>
+              <div className="text-xs text-mute">Configuring flags and specifications arrives in R2, starting from the attributes below.</div>
             </div>
           </div>
         ) : null}
       </Card>
 
-      {node.level < 5 ? (
+      <AttributeSetCard nodeId={node.id} nodeName={node.name} canEdit={node.canEdit} version={node.attributeCount} />
+
+      {node.kind === 'group' ? (
         <Card>
-          <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 pb-3">
             <div>
-              <h3 className="font-semibold">{LEVEL_NAMES[node.level + 1]} categories</h3>
+              <h3 className="font-semibold">Subcategories</h3>
               <p className="text-xs text-mute">{kids.length} under {node.name}</p>
             </div>
-            {node.canCreateChild && node.status === 'active' ? <CreateNodeButton parent={node} label={`New ${LEVEL_NAMES[node.level + 1]!.toLowerCase()}`} /> : null}
+            {node.canCreateChild && node.status === 'active' ? (
+              <div className="flex flex-wrap gap-2">
+                <CreateNodeButton parent={node} label="New category" />
+                <Button size="sm" variant="secondary" onClick={onAddFromStandard}><Globe size={14} /> Add from standard</Button>
+              </div>
+            ) : null}
           </div>
           {kids.length ? (
             <ul className="divide-y divide-line border-t border-line">
               {kids.map((k) => (
                 <li key={k.id}>
                   <button type="button" onClick={() => onSelect(k.id)} className={cn('flex w-full items-center gap-3 px-5 py-2.5 text-left text-sm hover:bg-soft/60', k.status === 'inactive' && 'opacity-50')}>
+                    {k.kind === 'listing' ? <ShoppingBag size={14} className="text-accent" /> : <Folder size={14} className="text-mute" />}
                     <span className="flex-1 truncate font-medium">{k.name}</span>
+                    {k.source !== 'custom' ? <Badge>{SOURCE_LABEL[k.source]}</Badge> : null}
                     {k.draft ? <Badge tone="warn">Draft v{k.draft.version}</Badge> : null}
                     <code className="text-[11px] text-mute">{k.code}</code>
                     <ChevronRight size={14} className="text-mute" />
@@ -350,28 +425,63 @@ function NodeDetail({
   );
 }
 
+function UnspscBox({ node, inheritedFrom }: { node: ExplorerNode; inheritedFrom: ExplorerNode | null }) {
+  const [editing, setEditing] = useState(false);
+  const [code, setCode] = useState(node.unspscCode ?? '');
+  const { pending, run } = useRunner();
+  const shown = node.unspscCode ?? inheritedFrom?.unspscCode ?? null;
+  return (
+    <div className="rounded-xl bg-soft p-3.5">
+      <div className="flex items-center gap-1.5 text-xs text-mute"><Hash size={13} /> UNSPSC code</div>
+      {editing ? (
+        <form
+          className="mt-1.5 flex gap-1.5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            run(() => setUnspscCodeAction(node.id, code.trim() || null), () => setEditing(false));
+          }}
+        >
+          <Input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" maxLength={8} placeholder="43211503" className="h-8 text-sm" aria-label="UNSPSC code" autoFocus />
+          <Button type="submit" size="sm" loading={pending}>Save</Button>
+        </form>
+      ) : (
+        <>
+          <div className="mt-1 text-sm font-medium"><code>{shown ?? 'Not mapped'}</code></div>
+          <div className="text-xs text-mute mt-0.5 flex items-center gap-2">
+            {node.unspscCode ? 'Set here' : inheritedFrom ? `Inherited from ${inheritedFrom.name}` : 'For procurement reporting'}
+            {node.canEdit && node.source !== 'unspsc' ? (
+              <button type="button" className="text-accent hover:underline" onClick={() => setEditing(true)}>{node.unspscCode ? 'Change' : 'Map'}</button>
+            ) : null}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ---------------------------------------------------------------- create */
 
 function CreateNodeButton({ parent, label, primary }: { parent: ExplorerNode | null; label: string; primary?: boolean }) {
   const [open, setOpen] = useState(false);
-  const level = parent ? parent.level + 1 : 1;
   return (
     <>
-      <Button size="sm" variant={primary ? 'primary' : 'secondary'} onClick={() => setOpen(true)} className={primary ? '' : 'w-full sm:w-auto'}>
+      <Button size="sm" variant={primary ? 'primary' : 'secondary'} onClick={() => setOpen(true)}>
         <Plus size={14} /> {label}
       </Button>
-      {open ? <CreateNodeDialog parent={parent} level={level} onClose={() => setOpen(false)} /> : null}
+      {open ? <CreateNodeDialog parent={parent} onClose={() => setOpen(false)} /> : null}
     </>
   );
 }
 
-function CreateNodeDialog({ parent, level, onClose }: { parent: ExplorerNode | null; level: number; onClose: () => void }) {
+function CreateNodeDialog({ parent, onClose }: { parent: ExplorerNode | null; onClose: () => void }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [f, setF] = useState({ name: '', code: '', aliases: '', description: '' });
+  const [f, setF] = useState({ name: '', kind: (parent ? 'listing' : 'group') as CategoryKind, aliases: '', description: '', unspscCode: '' });
   const [matches, setMatches] = useState<Match[]>([]);
   const { pending, run } = useRunner();
   const typed = [f.name, ...splitList(f.aliases)].filter((x) => x.trim().length >= 2).join('|');
+  const listing = f.kind === 'listing';
+  const atBottom = parent ? parent.level + 1 >= MAX_DEPTH : false;
 
   useEffect(() => {
     if (!typed) return;
@@ -394,23 +504,24 @@ function CreateNodeDialog({ parent, level, onClose }: { parent: ExplorerNode | n
     <Dialog
       open
       onOpenChange={(o) => !o && onClose()}
-      title={`New ${LEVEL_NAMES[level]!.toLowerCase()} (L${level})`}
-      description={parent ? `Under ${parent.name} (${parent.code})` : 'A new top-level segment.'}
+      title={parent ? 'New category' : 'New top-level group'}
+      description={parent ? `Under ${parent.name} (level ${parent.level + 1} of up to ${MAX_DEPTH})` : 'A new branch at the top of the tree.'}
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button
             loading={pending}
-            disabled={!f.name.trim() || (level === 5 && !splitList(f.aliases).length) || exactAlias}
+            disabled={!f.name.trim() || (listing && !splitList(f.aliases).length) || exactAlias || (atBottom && !listing)}
             onClick={() =>
               run(
                 () =>
                   createNodeAction({
                     parentId: parent?.id ?? null,
+                    kind: f.kind,
                     name: f.name,
-                    code: f.code || undefined,
                     aliases: splitList(f.aliases),
                     description: f.description,
+                    unspscCode: f.unspscCode.trim() || undefined,
                   }),
                 (s) => {
                   onClose();
@@ -426,27 +537,41 @@ function CreateNodeDialog({ parent, level, onClose }: { parent: ExplorerNode | n
       }
     >
       <div className="space-y-4">
+        {parent ? (
+          <fieldset className="grid sm:grid-cols-2 gap-2">
+            <legend className="sr-only">Kind</legend>
+            {(['listing', 'group'] as const).map((k) => (
+              <label key={k} className={cn('flex items-start gap-2.5 rounded-xl border p-3 cursor-pointer', f.kind === k ? 'border-accent bg-accent/5' : 'border-line')}>
+                <Radio name="new-kind" checked={f.kind === k} onChange={() => setF({ ...f, kind: k })} />
+                <span>
+                  <span className="block text-sm font-medium">{KIND_LABEL[k]}</span>
+                  <span className="block text-xs text-mute">{k === 'listing' ? 'Sellers list products here' : 'Holds more categories'}</span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+        ) : null}
         <Field label="Name" htmlFor="n-name" required>
-          <Input id="n-name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} autoFocus placeholder={level === 5 ? 'Gaming laptops' : ''} />
+          <Input id="n-name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} autoFocus placeholder={listing ? 'Gaming laptops' : 'Computers'} />
         </Field>
         <Field
-          label={level === 5 ? 'Aliases' : 'Aliases (optional)'}
+          label={listing ? 'Aliases' : 'Aliases (optional)'}
           htmlFor="n-aliases"
-          hint={level === 5 ? 'At least one, unique across the whole tree. Comma separated.' : 'Comma separated, unique across the tree.'}
-          required={level === 5}
+          hint={listing ? 'At least one, unique across the whole tree. Comma separated.' : 'Comma separated, unique across the tree.'}
+          required={listing}
         >
-          <Input id="n-aliases" value={f.aliases} onChange={(e) => setF({ ...f, aliases: e.target.value })} placeholder={level === 5 ? 'High Performance Gaming Laptops' : ''} />
+          <Input id="n-aliases" value={f.aliases} onChange={(e) => setF({ ...f, aliases: e.target.value })} placeholder={listing ? 'High Performance Gaming Laptops' : ''} />
         </Field>
-        {level < 5 ? (
-          <Field label="Code (optional)" htmlFor="n-code" hint={parent ? `Leave empty for the next free code, or type ${parent.code} + two digits (UNSPSC).` : 'Two digits, or leave empty for the next free one.'}>
-            <Input id="n-code" value={f.code} onChange={(e) => setF({ ...f, code: e.target.value })} inputMode="numeric" placeholder={parent ? `${parent.code}10` : '43'} />
+        <div className="grid sm:grid-cols-[1fr_160px] gap-4">
+          <Field label="Description" htmlFor="n-desc">
+            <Textarea id="n-desc" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} className="min-h-16" />
           </Field>
-        ) : (
-          <p className="text-xs text-mute">The code is generated from the commodity: {parent?.code}-01, -02… then A1…</p>
-        )}
-        <Field label="Description" htmlFor="n-desc">
-          <Textarea id="n-desc" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} className="min-h-16" />
-        </Field>
+          <Field label="UNSPSC code" htmlFor="n-unspsc" hint="Optional, 8 digits">
+            <Input id="n-unspsc" value={f.unspscCode} onChange={(e) => setF({ ...f, unspscCode: e.target.value })} inputMode="numeric" maxLength={8} placeholder="43211503" />
+          </Field>
+        </div>
+        <p className="text-xs text-mute">The code is generated: {parent ? `${parent.code}.01, .02…` : 'C01, C02…'}</p>
+        {atBottom && !listing ? <p className="text-xs text-warn">This is the deepest level, so only a listing category fits here.</p> : null}
         {shown.length ? (
           <div className={cn('rounded-xl px-4 py-3 text-sm', exactAlias ? 'bg-bad/10' : 'bg-warn/10')}>
             <div className={cn('flex items-center gap-1.5 font-medium', exactAlias ? 'text-bad' : 'text-warn')}>
@@ -467,7 +592,7 @@ function CreateNodeDialog({ parent, level, onClose }: { parent: ExplorerNode | n
   );
 }
 
-/* ---------------------------------------------------------------- rename / move */
+/* ---------------------------------------------------------------- edit / move / kind */
 
 function RenameButton({ node }: { node: ExplorerNode }) {
   const [open, setOpen] = useState(false);
@@ -481,7 +606,7 @@ function RenameButton({ node }: { node: ExplorerNode }) {
           open
           onOpenChange={setOpen}
           title={`Edit ${node.name}`}
-          description="Renaming keeps the code; the change is recorded in the audit log."
+          description={node.source === 'custom' ? 'Renaming keeps the code; the change is recorded in the audit log.' : `Renaming keeps the link to ${SOURCE_LABEL[node.source]} (${node.externalId}).`}
           footer={<><Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button><Button loading={pending} onClick={() => run(() => renameNodeAction(node.id, f.name, f.description), () => setOpen(false))}>Save</Button></>}
         >
           <div className="space-y-4">
@@ -494,14 +619,27 @@ function RenameButton({ node }: { node: ExplorerNode }) {
   );
 }
 
-function MoveButton({ node, nodes, pathOf }: { node: ExplorerNode; nodes: ExplorerNode[]; pathOf: (n: ExplorerNode) => ExplorerNode[] }) {
+function MoveButton({
+  node,
+  nodes,
+  label,
+  pathOf,
+  canCreateRoot,
+}: {
+  node: ExplorerNode;
+  nodes: ExplorerNode[];
+  label: (n: ExplorerNode) => string;
+  pathOf: (n: ExplorerNode) => ExplorerNode[];
+  canCreateRoot: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [target, setTarget] = useState('');
   const { pending, run } = useRunner();
   const options = nodes
-    .filter((n) => n.level === node.level - 1 && n.status === 'active' && n.id !== node.parentId && n.canCreateChild)
-    .map((n) => ({ id: n.id, label: pathOf(n).map((p) => p.name).join(' › ') }))
+    .filter((n) => n.kind === 'group' && n.status === 'active' && n.id !== node.parentId && n.canCreateChild && !pathOf(n).some((p) => p.id === node.id))
+    .map((n) => ({ id: n.id, label: label(n) }))
     .sort((a, b) => a.label.localeCompare(b.label));
+  const rootOk = canCreateRoot && node.kind === 'group' && node.parentId !== null;
   return (
     <>
       <Button size="sm" variant="secondary" onClick={() => setOpen(true)}><MoveRight size={14} /> Move</Button>
@@ -510,18 +648,58 @@ function MoveButton({ node, nodes, pathOf }: { node: ExplorerNode; nodes: Explor
           open
           onOpenChange={setOpen}
           title={`Move ${node.name}`}
-          description={`Pick a new ${LEVEL_NAMES[node.level - 1]!.toLowerCase()}. Everything under it moves too, and codes stay the same.`}
-          footer={<><Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button><Button loading={pending} disabled={!target} onClick={() => run(() => moveNodeAction(node.id, target), () => setOpen(false))}>Move</Button></>}
+          description="Pick its new parent group. Everything under it moves too; codes stay the same."
+          footer={<><Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button><Button loading={pending} disabled={!target} onClick={() => run(() => moveNodeAction(node.id, target === 'root' ? null : target), () => setOpen(false))}>Move</Button></>}
         >
-          {options.length ? (
-            <Field label={`New ${LEVEL_NAMES[node.level - 1]!.toLowerCase()}`} htmlFor="m-target">
+          {options.length || rootOk ? (
+            <Field label="New parent" htmlFor="m-target">
               <Select id="m-target" value={target} onChange={(e) => setTarget(e.target.value)}>
                 <option value="">Choose…</option>
+                {rootOk ? <option value="root">Top level</option> : null}
                 {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
               </Select>
             </Field>
           ) : (
-            <p className="text-sm text-mute">There is no other {LEVEL_NAMES[node.level - 1]!.toLowerCase()} you can move it to.</p>
+            <p className="text-sm text-mute">There is no other group you can move it to.</p>
+          )}
+        </Dialog>
+      ) : null}
+    </>
+  );
+}
+
+function KindButton({ node, hasChildren }: { node: ExplorerNode; hasChildren: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [aliases, setAliases] = useState('');
+  const { pending, run } = useRunner();
+  const toListing = node.kind === 'group';
+  if (toListing && (hasChildren || !node.parentId)) return null;
+  if (!toListing && node.draft && node.draft.state !== 'DRAFT') return null;
+  const needAlias = toListing && node.aliases.length === 0;
+  return (
+    <>
+      <Button size="sm" variant="secondary" onClick={() => setOpen(true)}><Shuffle size={14} /> {toListing ? 'Make listing' : 'Make group'}</Button>
+      {open ? (
+        <Dialog
+          open
+          onOpenChange={setOpen}
+          title={toListing ? `Make ${node.name} a listing category` : `Make ${node.name} a group`}
+          description={toListing ? 'Sellers will list products here. An empty draft v0 is created.' : 'It can then hold subcategories. Its empty draft is discarded.'}
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button loading={pending} disabled={needAlias && !splitList(aliases).length} onClick={() => run(() => setNodeKindAction(node.id, toListing ? 'listing' : 'group', splitList(aliases)), () => setOpen(false))}>
+                Confirm
+              </Button>
+            </>
+          }
+        >
+          {needAlias ? (
+            <Field label="Aliases" htmlFor="k-aliases" required hint="A listing category needs at least one unique alias.">
+              <Input id="k-aliases" value={aliases} onChange={(e) => setAliases(e.target.value)} autoFocus />
+            </Field>
+          ) : (
+            <p className="text-sm text-mute">This is recorded in the audit log.</p>
           )}
         </Dialog>
       ) : null}

@@ -18,6 +18,7 @@ my-own-marketplace/
 │     └─ vercel.json          crons, function regions
 ├─ packages/
 │  ├─ modules/                one folder per bounded context: domain, application, infrastructure
+│  │  └─ standards/data/      bundled Shopify taxonomy release (MIT), rebuilt by scripts/build-shopify.mjs
 │  ├─ ui/                     Orbita design system: tokens.css, Tailwind preset, components
 │  ├─ domain/                 shared kernel: ids, money, units, state machine helpers
 │  ├─ contract/               category contract compiler, differ, validators (Ajv)
@@ -34,16 +35,18 @@ my-own-marketplace/
 
 ## Roadmap
 
-The detailed scope of every release is in **[docs/releases](../releases/README.md)**: ten releases (R0–R9) grouped into three milestones.
+The detailed scope of every release is in **[docs/releases](../releases/README.md)**: ten releases (R0–R9) plus point releases R0.1 and R1.1, grouped into three milestones.
 
 | Milestone | Releases | Outcome |
 | --- | --- | --- |
-| MVP · pilot | R0 Foundations · R1 Library & taxonomy · R2 Config studio + contract · R3 Category approval · R4 Sellers & brands · R5 Catalog creation & approval | Full chain for a pilot group: category → brand → catalog → review → marketplace preview |
+| MVP · pilot | R0 Foundations (+ R0.1 roles) · R1 Library & taxonomy · R1.1 Standard taxonomies (Shopify, UNSPSC) · R2 Config studio + contract · R3 Category approval · R4 Sellers & brands · R5 Catalog creation & approval | Full chain for a pilot group: category → brand → catalog → review → marketplace preview |
 | V1 · public launch | R6 Maintenance & versioning · R7 AI assist | Catalogs stay correct over time; AI fills most of the typing |
 | V2 · scale | R8 Smart governance & bulk · R9 Growth & intelligence | Risk-based review, bulk onboarding, opportunity engine, AI category drafter |
 
 ## Immediate next steps
 
-1. Create the Vercel and Supabase accounts ([09 · Deployment](09-deployment-and-services.md#what-you-need-to-do-and-when)).
-2. Agree the open questions in [`docs/brainstorm/open-questions.md`](../brainstorm/open-questions.md).
-3. Build **R0** (monorepo, Supabase CLI, Orbita UI shell, auth, roles, audit, CI, first Vercel deploy).
+R0, R0.1, R1 and R1.1 are built and deployed. Next:
+
+1. Load the Shopify taxonomy (Admin › Standard taxonomies) and, if procurement reporting is needed, upload a UNSPSC file.
+2. Rebuild the pilot categories by adopting from the standards; keep custom ones only where no standard fits.
+3. Build **R2** (configuration studio and Category Contract), starting each spec sheet from the category attribute set.

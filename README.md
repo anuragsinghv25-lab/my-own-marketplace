@@ -6,18 +6,19 @@ Orbita is a multi-role marketplace platform for governed product catalogs: admin
 
 ## Status
 
-**R0, R0.1 and R1 built**: login for 8 roles, role-driven Orbita shell, users/roles/audit, the attribute library
-(attributes, value lists, units, certificates, flags and flag profiles), the L1–L5 category tree with aliases and
-workgroups, `/api/v1` with OpenAPI, CI. Next: R2 (category configuration studio). **Deploying it:** [docs/setup/deploy-r0.md](docs/setup/deploy-r0.md).
+**R0, R0.1, R1 and R1.1 built**: login for 8 roles, role-driven Orbita shell, users/roles/audit, the attribute library
+(attributes, value lists, units, certificates, flags and flag profiles), a variable-depth category tree (groups and listing
+categories) with aliases, workgroups and per-category attribute sets, adoption from the **Shopify Standard Product Taxonomy**
+and **UNSPSC**, `/api/v1` with OpenAPI, CI. Next: R2 (category configuration studio). **Deploying it:** [docs/setup/deploy-r0.md](docs/setup/deploy-r0.md).
 
 | Path | What it is |
 | --- | --- |
 | [`apps/web/`](apps/web) | Next.js app (pages, `/api/v1` route handlers, adapters to Supabase and Resend) |
-| [`packages/`](packages) | `ui` (Orbita design system), `authz` (roles + CASL), `db` (Drizzle schema), `domain`, `modules/{identity,audit,library,taxonomy}` |
+| [`packages/`](packages) | `ui` (Orbita design system), `authz` (roles + CASL), `db` (Drizzle schema), `domain`, `modules/{identity,audit,library,standards,taxonomy}` |
 | [`supabase/`](supabase/README.md) | SQL migrations and local Supabase config |
 | [`docs/setup/deploy-r0.md`](docs/setup/deploy-r0.md) | Step-by-step: Supabase, Vercel, domain, email |
 | [`docs/architecture/`](docs/architecture/README.md) | Technical architecture: scope, roles, domain model, system design, workflows, tech stack, AI, roadmap |
-| [`docs/releases/`](docs/releases/README.md) | Release plan R0–R9 with detailed scope, screens and exit demos |
+| [`docs/releases/`](docs/releases/README.md) | Release plan R0–R9 (plus R0.1, R1.1) with detailed scope, screens and exit demos |
 | [`docs/adr/`](docs/adr/README.md) | Architecture Decision Records |
 | [`docs/design/orbita-design-system.md`](docs/design/orbita-design-system.md) | Design tokens and UX patterns extracted from the prototype |
 | [`docs/brainstorm/open-questions.md`](docs/brainstorm/open-questions.md) | Decisions still open, with defaults |
@@ -53,10 +54,14 @@ TypeScript monorepo (pnpm + Turborepo) · Next.js + React + Tailwind (Orbita des
 
 ## Releases
 
-Ten releases in three milestones. Full scope per release: [docs/releases](docs/releases/README.md).
+Ten releases plus two point releases in three milestones. Full scope per release: [docs/releases](docs/releases/README.md).
 
 | Milestone | Releases |
 | --- | --- |
-| MVP · pilot | R0 Foundations · R1 Library & taxonomy · R2 Config studio + contract · R3 Category approval · R4 Sellers & brands · R5 Catalog creation & approval |
+| MVP · pilot | R0 Foundations · R0.1 Roles · R1 Library & taxonomy · R1.1 Standard taxonomies · R2 Config studio + contract · R3 Category approval · R4 Sellers & brands · R5 Catalog creation & approval |
 | V1 · public launch | R6 Maintenance & versioning · R7 AI assist |
 | V2 · scale | R8 Smart governance & bulk · R9 Growth & intelligence |
+
+## Third-party data
+
+`packages/modules/standards/data/shopify` contains a compact copy of the [Shopify Standard Product Taxonomy](https://github.com/Shopify/product-taxonomy) (release 2026-10), © Shopify, MIT licence ([LICENSE](packages/modules/standards/data/shopify/LICENSE)). UNSPSC is not included; operators upload it under their own terms.

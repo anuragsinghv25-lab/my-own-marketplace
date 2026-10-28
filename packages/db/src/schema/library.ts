@@ -12,6 +12,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
+import { standardSource } from './standards';
 
 /**
  * R1 · Attribute library: the reusable building blocks every category is configured from.
@@ -70,10 +71,15 @@ export const valueLists = pgTable(
     name: text('name').notNull(),
     description: text('description').notNull().default(''),
     kind: valueListKind('kind').notNull().default('plain'),
+    source: standardSource('source').notNull().default('custom'),
+    externalRef: text('external_ref'),
     status: libraryStatus('status').notNull().default('active'),
     ...audit,
   },
-  (t) => [uniqueIndex('value_lists_code_key').on(sql`lower(${t.code})`)],
+  (t) => [
+    uniqueIndex('value_lists_code_key').on(sql`lower(${t.code})`),
+    uniqueIndex('value_lists_external_key').on(t.source, t.externalRef).where(sql`${t.externalRef} is not null`),
+  ],
 );
 
 export const valueListItems = pgTable(
@@ -141,12 +147,16 @@ export const attributes = pgTable(
     synonyms: text('synonyms').array().notNull().default(sql`'{}'::text[]`),
     buyerHint: text('buyer_hint').notNull().default(''),
     sellerHint: text('seller_hint').notNull().default(''),
+    /** R1.1: where it came from; Shopify attributes keep their handle so re-imports reuse them */
+    source: standardSource('source').notNull().default('custom'),
+    externalRef: text('external_ref'),
     status: libraryStatus('status').notNull().default('active'),
     ...audit,
   },
   (t) => [
     uniqueIndex('attributes_code_key').on(sql`lower(${t.code})`),
     uniqueIndex('attributes_name_key').on(sql`lower(${t.name})`),
+    uniqueIndex('attributes_external_key').on(t.source, t.externalRef).where(sql`${t.externalRef} is not null`),
   ],
 );
 

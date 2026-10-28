@@ -12,5 +12,6 @@ Short records of significant decisions: the context, what we chose, and what it 
 | [0006](0006-auth-and-authorization.md) | Better Auth for authentication, CASL for authorisation | Amended by 0008 |
 | [0007](0007-rules-as-data.md) | Business rules as data with GoRules ZEN | Proposed |
 | [0008](0008-vercel-and-supabase.md) | Deploy on Vercel with Supabase (Postgres, Auth, Storage) | Accepted |
+| [0009](0009-standard-taxonomies.md) | Shopify-style variable-depth tree; adopt from Shopify and UNSPSC | Accepted |
 
 Template: [`0000-template.md`](0000-template.md)

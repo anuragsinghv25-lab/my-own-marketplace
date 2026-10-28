@@ -36,6 +36,7 @@ export type SubjectType =
   | 'RoleGrant'
   | 'AuditEvent'
   | 'AttributeLibrary'
+  | 'StandardTaxonomy'
   | 'FlagProfile'
   | 'Workgroup'
   | 'CategoryNode'
@@ -107,7 +108,7 @@ export function defineAbilityFor({ userId, grants }: AbilityInput): AppAbility {
       else can(action, type);
     };
 
-    const READ_CONFIG: SubjectType[] = ['AttributeLibrary', 'FlagProfile', 'Workgroup', 'CategoryNode', 'CategoryVersion'];
+    const READ_CONFIG: SubjectType[] = ['AttributeLibrary', 'StandardTaxonomy', 'FlagProfile', 'Workgroup', 'CategoryNode', 'CategoryVersion'];
 
     switch (g.role) {
       case 'platform_admin':
@@ -115,7 +116,7 @@ export function defineAbilityFor({ userId, grants }: AbilityInput): AppAbility {
         can(['read', 'invite', 'update', 'deactivate'], 'User');
         can(['read', 'grant', 'revoke'], 'RoleGrant');
         can('read', 'AuditEvent');
-        can(['read', 'create', 'update'], ['AttributeLibrary', 'FlagProfile', 'Workgroup']);
+        can(['read', 'create', 'update'], ['AttributeLibrary', 'StandardTaxonomy', 'FlagProfile', 'Workgroup']);
         can('read', ['CategoryNode', 'CategoryVersion']);
         break;
 

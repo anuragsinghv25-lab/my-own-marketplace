@@ -2,7 +2,9 @@
 
 **Goal:** a drafter and checker can fully configure a category (flags, specs, rules) by **reviewing and adjusting inherited defaults instead of typing everything**, and see exactly what sellers will get, because the configuration compiles into a Category Contract.
 
-**Depends on:** R1. **Indicative size:** 3–4 sprints (the largest and most important release).
+**Depends on:** R1, R1.1. **Indicative size:** 3–4 sprints (the largest and most important release).
+
+> **R1.1 impact:** every listing category now arrives with an **attribute set** (own plus inherited, often adopted from Shopify with value lists). The spec builder starts from that set instead of an empty sheet, so most of a drafter's work becomes reviewing and narrowing (allowed-value subsets, importance, grouping) rather than picking attributes one by one.
 
 ## Scope
 
@@ -19,7 +21,7 @@
 
 | ID | Feature | Details |
 | --- | --- | --- |
-| F2.5 | Spec builder | Add specs by **picking attributes from the library** (drag or search), or clone from a sibling category; group specs (group name shown to buyers); reorder; expand/collapse |
+| F2.5 | Spec builder | **Pre-filled from the category's attribute set** (R1.1; required ones marked mandatory); add more by **picking attributes from the library** (drag or search), or clone from a sibling category; group specs (group name shown to buyers); reorder; expand/collapse |
 | F2.6 | Spec settings | Per spec: allowed-value subset or conditions (≥, ≤, step, decimals), display as discrete or ranges (manual or generated range sets), importance (super-golden / golden / filter / mandatory / optional), preference (higher/lower/shorter/larger/yes/no/none), seller selection (single/multi), bid restriction, comparable-product flag, per-unit price comparison flag (one per category), buyer and seller hints |
 | F2.7 | Mutual-exclusivity guards | The UI only offers valid combinations (e.g. text is always mandatory-only; Boolean is single-select; preference options depend on datatype; only one per-unit comparison spec) |
 | F2.8 | Customisable specs group | Auto-created when the "allow customisation" flag is on |
