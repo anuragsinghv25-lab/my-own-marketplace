@@ -29,6 +29,20 @@
       "when": 1793116373296,
       "tag": "20261027155253_consolidate_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793185181034,
+      "tag": "20261028105941_library_and_taxonomy",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793185182323,
+      "tag": "20261028105942_library_seed_and_security",
+      "breakpoints": true
     }
   ]
 }

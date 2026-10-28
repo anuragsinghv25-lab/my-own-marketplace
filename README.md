@@ -6,13 +6,14 @@ Orbita is a multi-role marketplace platform for governed product catalogs: admin
 
 ## Status
 
-**R0 Foundations built**: login for every role, role-driven Orbita app shell, admin users/roles, audit log,
-`/api/v1` with OpenAPI, CI. Business features start in R1. **Deploying it:** [docs/setup/deploy-r0.md](docs/setup/deploy-r0.md).
+**R0, R0.1 and R1 built**: login for 8 roles, role-driven Orbita shell, users/roles/audit, the attribute library
+(attributes, value lists, units, certificates, flags and flag profiles), the L1–L5 category tree with aliases and
+workgroups, `/api/v1` with OpenAPI, CI. Next: R2 (category configuration studio). **Deploying it:** [docs/setup/deploy-r0.md](docs/setup/deploy-r0.md).
 
 | Path | What it is |
 | --- | --- |
 | [`apps/web/`](apps/web) | Next.js app (pages, `/api/v1` route handlers, adapters to Supabase and Resend) |
-| [`packages/`](packages) | `ui` (Orbita design system), `authz` (roles + CASL), `db` (Drizzle schema), `domain`, `modules/identity`, `modules/audit` |
+| [`packages/`](packages) | `ui` (Orbita design system), `authz` (roles + CASL), `db` (Drizzle schema), `domain`, `modules/{identity,audit,library,taxonomy}` |
 | [`supabase/`](supabase/README.md) | SQL migrations and local Supabase config |
 | [`docs/setup/deploy-r0.md`](docs/setup/deploy-r0.md) | Step-by-step: Supabase, Vercel, domain, email |
 | [`docs/architecture/`](docs/architecture/README.md) | Technical architecture: scope, roles, domain model, system design, workflows, tech stack, AI, roadmap |

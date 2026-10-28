@@ -187,6 +187,52 @@ export const contracts = {
     }),
     response: z.object({ items: z.array(auditEvent), nextCursor: z.number().int().nullable() }),
   },
+  listAttributes: {
+    method: 'GET',
+    path: '/api/v1/library/attributes',
+    summary: 'Attributes in the library, with their type, value list and unit',
+    tag: 'Library',
+    auth: 'session',
+    query: z.object({
+      q: z.string().max(100).optional(),
+      dataType: z.string().max(40).optional(),
+      status: z.enum(['active', 'deprecated']).optional(),
+    }),
+    response: z.object({
+      items: z.array(
+        z.object({
+          id: z.uuid(),
+          code: z.string(),
+          name: z.string(),
+          dataType: z.string(),
+          valueList: z.string().nullable(),
+          unit: z.string().nullable(),
+          status: z.enum(['active', 'deprecated']),
+        }),
+      ),
+    }),
+  },
+  categoryTree: {
+    method: 'GET',
+    path: '/api/v1/taxonomy/tree',
+    summary: 'The whole category tree (flat list with parent ids), aliases and owning workgroup',
+    tag: 'Taxonomy',
+    auth: 'session',
+    response: z.object({
+      nodes: z.array(
+        z.object({
+          id: z.uuid(),
+          parentId: z.uuid().nullable(),
+          level: z.number().int().min(1).max(5),
+          code: z.string(),
+          name: z.string(),
+          status: z.enum(['active', 'inactive']),
+          aliases: z.array(z.string()),
+          workgroupId: z.uuid().nullable(),
+        }),
+      ),
+    }),
+  },
 } satisfies Record<string, Contract>;
 
 export type ContractName = keyof typeof contracts;
