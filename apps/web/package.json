@@ -20,6 +20,8 @@
     "@orbita/db": "workspace:*",
     "@orbita/domain": "workspace:*",
     "@orbita/identity": "workspace:*",
+    "@orbita/library": "workspace:*",
+    "@orbita/taxonomy": "workspace:*",
     "@orbita/ui": "workspace:*",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.1.1",

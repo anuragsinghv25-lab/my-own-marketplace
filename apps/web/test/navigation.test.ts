@@ -30,16 +30,25 @@ describe('role-driven navigation', () => {
     }
   });
 
-  it('the platform admin sees shared configuration (arriving in R1/R2)', () => {
+  it('the platform admin sees users, audit and shared configuration (R1)', () => {
     expect(hrefs('platform_admin')).toEqual([
       '/admin',
       '/admin/users',
       '/admin/roles',
       '/admin/audit',
-      '/admin/attributes',
+      '/admin/library',
+      '/admin/flags',
       '/admin/workgroups',
-      '/admin/flag-profiles',
     ]);
+    const live = nav('platform_admin').flatMap((s) => s.items).filter((i) => !i.release);
+    expect(live.map((i) => i.href)).toContain('/admin/library');
+  });
+
+  it('the category tree is live for category managers and approvers', () => {
+    for (const r of ['category_manager', 'approver'] as const) {
+      const tree = nav(r).flatMap((s) => s.items).find((i) => i.href === '/workbench/taxonomy');
+      expect(tree?.release, r).toBeUndefined();
+    }
   });
 
   it('a category manager sees only the workbench, without approvals', () => {

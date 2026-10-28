@@ -1,12 +1,12 @@
 # R1 · Attribute library and taxonomy
 
-**Goal:** the building blocks every category is made from. Template managers define *what can be configured*; category creators build *the tree*; workgroup managers decide *who owns which part of the tree*.
+**Goal:** the building blocks every category is made from. The platform admin defines *what can be configured* and *who owns which part of the tree*; category managers build *the tree*.
 
-**Depends on:** R0. **Indicative size:** 2 sprints.
+**Depends on:** R0. **Indicative size:** 2 sprints. **Status:** built (roles below use the R0.1 model).
 
 ## Scope
 
-### Attribute library (template manager)
+### Attribute library (platform admin)
 
 | ID | Feature | Details |
 | --- | --- | --- |
@@ -20,7 +20,7 @@
 | F1.8 | Certificate types | Certificate type catalogue (e.g. safety, food licence, ISO): fields to capture, levels (product / seller / both), verification method (manual / API later), expiry rules |
 | F1.9 | Platform limits | Text lengths, max images, max UoMs, bulk limits, draft lifetime, reminder offsets: all as editable settings |
 
-### Taxonomy (category creator) and workgroups (workgroup manager)
+### Taxonomy (category manager) and workgroups (platform admin)
 
 | ID | Feature | Details |
 | --- | --- | --- |
@@ -46,7 +46,21 @@ Configuring a specific category (R2). Approving categories (R3).
 
 ## Exit demo
 
-1. Template manager creates attributes *Processor*, *RAM (GB)*, *Display size (inch)*, *Refresh rate (Hz)* and a flag profile "Branded electronics".
-2. Workgroup manager creates "IT Hardware" workgroup with a checker and an approver, covering L1 "IT & Electronics".
-3. Category creator builds IT & Electronics › Portable computers › Notebooks › Gaming laptops (L5), alias "High Performance Gaming Laptops"; tries a duplicate alias and is blocked.
-4. The checker receives the assignment and sees the empty draft.
+1. Platform admin creates attributes *Processor*, *RAM (GB)*, *Display size (inch)*, *Refresh rate (Hz)* and a flag profile "Branded electronics".
+2. Platform admin creates the "IT Hardware" workgroup with a category manager and an approver, covering L1 "IT & Electronics".
+3. The category manager builds IT & Electronics › Portable computers › Notebooks › Notebook computers › Gaming laptops (L5), alias "High Performance Gaming Laptops"; tries a duplicate alias and is blocked.
+4. The workgroup's category manager sees the empty draft v0 assigned to them on the workbench home.
+
+## As built
+
+| Item | Decision |
+| --- | --- |
+| Roles | Library, flags, profiles, limits and workgroups: platform admin. Tree: category manager (global, or limited to a workgroup's subtree). Approvers and auditors read the tree. |
+| Workgroups | Assigned to any node; children inherit. Members are role grants scoped to the workgroup, so separation-of-duties rules apply. |
+| Codes | L1 two digits, each level adds two (UNSPSC-style, manual entry allowed for L1–L4); L5 = commodity code + `-01…99`, then `A1…`. Codes stay the same when a category moves. |
+| Duplicates | Sibling names unique; aliases unique across the tree and never equal to another category's name; live "similar categories" search (trigram) while typing. |
+| L5 shell | Creating an L5 creates draft v0, assigned to the workgroup's category manager when there is exactly one, otherwise to the creator. |
+| Deprecate, never delete | Library rows and value-list items are deprecated, so categories configured in R2 keep working. |
+| Starter data | Units for 8 dimensions, 4 yes/no label pairs, 16 platform flags, 7 platform limits and 4 certificate types are seeded by migration. |
+| API | `GET /api/v1/library/attributes`, `GET /api/v1/taxonomy/tree`. |
+| Deferred | CSV import/export of value lists, profile diff view, "where used" (needs R2 category versions), email notifications for assignments. |
