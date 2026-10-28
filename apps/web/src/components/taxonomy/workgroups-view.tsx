@@ -141,7 +141,7 @@ function AddCoverage({ workgroupId }: { workgroupId: string }) {
     <>
       <Button size="sm" variant="secondary" onClick={() => setOpen(true)}><Plus size={14} /> Add</Button>
       {open ? (
-        <Dialog open onOpenChange={setOpen} title="Add a category to this workgroup" description="Usually a segment (L1) or family (L2); everything under it comes along.">
+        <Dialog open onOpenChange={setOpen} title="Add a category to this workgroup" description="Usually a top-level group or the one below it; everything under it comes along.">
           <div className="relative">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-mute" />
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search the tree" className="pl-9" autoFocus aria-label="Search categories" />
@@ -150,7 +150,7 @@ function AddCoverage({ workgroupId }: { workgroupId: string }) {
             {(q.trim().length >= 2 ? results : []).map((r) => (
               <li key={r.id} className="flex items-center gap-3 py-2">
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium">{r.name} <span className="text-xs text-mute">L{r.level}</span></div>
+                  <div className="text-sm font-medium">{r.name} <span className="text-xs text-mute">level {r.level}</span></div>
                   <div className="text-xs text-mute truncate">{r.path}</div>
                 </div>
                 <Button size="sm" loading={pending} onClick={() => run(() => assignWorkgroupAction(r.id, workgroupId), () => setOpen(false))}>Add</Button>

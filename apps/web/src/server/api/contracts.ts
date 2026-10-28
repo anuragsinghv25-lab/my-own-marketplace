@@ -215,7 +215,7 @@ export const contracts = {
   categoryTree: {
     method: 'GET',
     path: '/api/v1/taxonomy/tree',
-    summary: 'The whole category tree (flat list with parent ids), aliases and owning workgroup',
+    summary: 'The whole category tree (flat list with parent ids): kind, provenance (custom, Shopify, UNSPSC), aliases and owning workgroup',
     tag: 'Taxonomy',
     auth: 'session',
     response: z.object({
@@ -223,10 +223,14 @@ export const contracts = {
         z.object({
           id: z.uuid(),
           parentId: z.uuid().nullable(),
-          level: z.number().int().min(1).max(5),
+          level: z.number().int().min(1).max(8),
+          kind: z.enum(['group', 'listing']),
           code: z.string(),
           name: z.string(),
           status: z.enum(['active', 'inactive']),
+          source: z.enum(['custom', 'shopify', 'unspsc']),
+          externalId: z.string().nullable(),
+          unspscCode: z.string().nullable(),
           aliases: z.array(z.string()),
           workgroupId: z.uuid().nullable(),
         }),

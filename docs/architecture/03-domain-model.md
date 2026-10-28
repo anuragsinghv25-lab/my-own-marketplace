@@ -14,7 +14,8 @@ flowchart TB
   end
   subgraph Governance["Category governance"]
     LIB[Attribute Library<br/>attributes, units,<br/>value lists, flag defs]
-    TAX[Taxonomy<br/>category tree, workgroups]
+    STD[Standard taxonomies<br/>Shopify, UNSPSC<br/>read-only reference]
+    TAX[Taxonomy<br/>category tree, attribute sets,<br/>workgroups]
     CFG[Category Versions<br/>flags, specs, rules]
     CON[(Category Contract<br/>compiled, immutable)]
   end
@@ -30,6 +31,9 @@ flowchart TB
     AI[AI services<br/>extract, classify, draft]
     INS[Insights<br/>opportunities, health]
   end
+  STD -- adopt --> TAX
+  STD -- attributes --> LIB
+  LIB --> TAX
   LIB --> CFG
   TAX --> CFG
   CFG -- publish --> CON
@@ -50,12 +54,13 @@ flowchart TB
 | Identity & Access | users, sessions, role grants | everything |
 | Organisations | seller orgs, divisions, addresses, vendor assessment results, OEM status | Brands, Catalog |
 | Attribute Library | attribute definitions, units, value lists, flag definitions, flag profiles, certificate types | Category Versions |
-| Taxonomy | category tree (L1–L5), codes, aliases, workgroups | Category Versions, search |
+| Standard taxonomies | reference copies of the Shopify Standard Product Taxonomy (bundled) and UNSPSC (uploaded): categories, paths, attribute handles and values | Taxonomy (adoption), Library (attribute import), AI (classification) |
+| Taxonomy | variable-depth category tree (groups and listing categories, up to 8 levels), provenance (custom / Shopify / UNSPSC), codes, aliases, UNSPSC mapping, category attribute sets, workgroups | Category Versions, search |
 | Category Versions | per-version flag values, spec definitions, dependency and pricing rules; the publish step | Category Contract |
 | Category Contract | the compiled, immutable "rulebook" of a published version | Catalog, AI, Review, search |
 | Brands | brands, trademarks, ownership and authorisation relations, brand-category approvals | Catalog |
 | Certificates | seller certificate library, validation status | Catalog, Review |
-| Catalog | products (shared facts), offers (per seller), pairing, variant families | Review, Insights, Buyer (later) |
+| Catalog | products (shared facts), variants (options from the attribute set), offers (per seller), pairing | Review, Insights, Buyer (later) |
 | Review & Workflow | review requests, lanes, tasks, decisions, SLAs, send-backs | all submitters |
 | AI services | suggestions with confidence, extraction jobs, embeddings | Catalog, Category Versions, Review |
 | Insights | opportunity signals, category health metrics | Seller app, admin console |
@@ -148,6 +153,10 @@ A category version stores `flag_values(version_id, flag_key, value jsonb)`. A **
 erDiagram
   CATEGORY_NODE ||--o{ CATEGORY_NODE : "parent of"
   CATEGORY_NODE ||--o{ CATEGORY_VERSION : has
+  CATEGORY_NODE ||--o{ CATEGORY_ATTRIBUTE : "attribute set (inherited)"
+  ATTRIBUTE ||--o{ CATEGORY_ATTRIBUTE : "used in"
+  REFERENCE_CATEGORY |o--o| CATEGORY_NODE : "adopted as"
+  REFERENCE_CATEGORY ||--o{ REFERENCE_ATTRIBUTE : "described by"
   WORKGROUP ||--o{ CATEGORY_NODE : governs
   WORKGROUP ||--o{ WORKGROUP_MEMBER : has
   CATEGORY_VERSION ||--o{ FLAG_VALUE : sets
@@ -172,7 +181,8 @@ erDiagram
   ORGANISATION ||--o{ PRODUCT : owns
   PRODUCT ||--o{ OFFER : "sold via"
   ORGANISATION ||--o{ OFFER : sells
-  VARIANT_FAMILY |o--o{ PRODUCT : groups
+  PRODUCT ||--o{ VARIANT : "options (≤ 3)"
+  VARIANT ||--o{ OFFER : "sold via"
   ORGANISATION ||--o{ CERTIFICATE : holds
   PRODUCT }o--o{ CERTIFICATE : "brand-level"
   OFFER }o--o{ CERTIFICATE : "seller-level"
@@ -188,6 +198,7 @@ Notes:
 
 - **Product vs Offer.** `PRODUCT` holds the shared facts (brand, model, specs, media, brand-level certificates) and is owned by one organisation (the OEM when it exists). `OFFER` is one seller's price, stock, serviceability and seller-level certificates. Pairing = creating an `OFFER` on someone else's `PRODUCT`.
 - **Spec values live in `PRODUCT.facts` (JSONB)**, validated against the pinned contract's `productSchema`, with generated columns / indexes for the attributes that are filterable. This keeps hundreds of categories with different specs in one table without an entity-attribute-value mess.
+- **Category nodes are groups or listing categories (R1.1).** Depth varies (up to 8). Only listing categories hold products and have versions. A node is custom or adopted from a standard (`source` + `external_id`), which is how later releases of Shopify or UNSPSC are diffed against the live tree (R6). The attribute set of a category is its own `CATEGORY_ATTRIBUTE` rows plus its ancestors'; R2's spec builder starts from it and R5's variant options come from it.
 - **`REVIEW_REQUEST` is generic.** Category versions, brand requests, catalogs and vendor assessments all go through the same review engine with a `subject_type` + `subject_id`.
 - **`AI_SUGGESTION`** stores every proposed value with model, confidence, source evidence and the human decision (accepted / edited / rejected). This is both the "never silent" guarantee and the training/feedback dataset.
 
@@ -202,4 +213,4 @@ Notes:
 
 Sellers see these collapsed into three buckets (**Live / Needs you / Not live**), as proposed in the enhancement playbook.
 
-IDs are UUIDv7 internally (time-ordered, index-friendly) with human-readable public codes where users need them (`CAT-L5-…`, `BR-…`, `PRD-…`, `OFR-…`).
+IDs are UUIDv7 internally (time-ordered, index-friendly) with human-readable public codes where users need them (custom category codes `C01.02.03`, adopted ones keep the standard's id such as `el-6-11-2` or `43211503`; `BR-…`, `PRD-…`, `OFR-…`).

@@ -81,6 +81,14 @@ describe('user administration (sample resource for R0)', () => {
     expect(abilityOf(g('category_manager')).can('update', 'AttributeLibrary')).toBe(false);
   });
 
+  it('platform admin loads standard taxonomies; category managers only browse and adopt from them', () => {
+    expect(abilityOf(g('platform_admin')).can('create', 'StandardTaxonomy')).toBe(true);
+    const cm = abilityOf(g('category_manager', 'workgroup', WG_A));
+    expect(cm.can('read', 'StandardTaxonomy')).toBe(true);
+    expect(cm.can('create', 'StandardTaxonomy')).toBe(false);
+    expect(abilityOf(g('seller_admin', 'org', WG_A)).can('read', 'StandardTaxonomy')).toBe(false);
+  });
+
   it('auditor never writes', () => {
     const a = abilityOf(g('auditor'));
     expect(a.can('read', 'User')).toBe(true);

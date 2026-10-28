@@ -21,6 +21,7 @@
     "@orbita/domain": "workspace:*",
     "@orbita/identity": "workspace:*",
     "@orbita/library": "workspace:*",
+    "@orbita/standards": "workspace:*",
     "@orbita/taxonomy": "workspace:*",
     "@orbita/ui": "workspace:*",
     "@react-email/components": "^1.0.12",
@@ -34,6 +35,7 @@
     "next": "^16.4.3",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "read-excel-file": "^9.3.13",
     "resend": "^6.34.1",
     "server-only": "^0.0.1",
     "zod": "^4.1.0"

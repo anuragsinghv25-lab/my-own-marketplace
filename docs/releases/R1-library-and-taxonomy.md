@@ -4,6 +4,8 @@
 
 **Depends on:** R0. **Indicative size:** 2 sprints. **Status:** built (roles below use the R0.1 model).
 
+> **Superseded in part by [R1.1](R1.1-standard-taxonomy.md):** the fixed five levels became a variable-depth tree of groups and listing categories ("L5" below = listing category), custom codes moved to the `C01.02…` scheme, and categories can be adopted from Shopify and UNSPSC with their attributes.
+
 ## Scope
 
 ### Attribute library (platform admin)

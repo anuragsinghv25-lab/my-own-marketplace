@@ -82,7 +82,8 @@ Admins can set passwords for demo accounts only; real users always reset their o
 | --- | --- | --- | --- | --- | --- | --- |
 | Users, role grants | CRU | — | — | — | — | — |
 | Attribute library, flag profiles, workgroups | CRU | R | R | — | — | — |
-| Category node | R | CRU | R | R | R | — |
+| Standard taxonomies (Shopify, UNSPSC references) | CRU (load) | R (adopt) | R | — | — | — |
+| Category node, attribute set, UNSPSC mapping | R | CRU | R | R | R | — |
 | Category version (draft) | R | RUS | R | R | — | — |
 | Category version (in review) | R | R (withdraw) | RA | R | — | — |
 | Category version (published) | R | R | R | R | R | — |

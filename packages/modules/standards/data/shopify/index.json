@@ -1,0 +1,163 @@
+{
+  "source": "shopify",
+  "version": "2026-10",
+  "upstream": "v2026-10",
+  "verticals": [
+    {
+      "prefix": "ap",
+      "name": "Animals & Pet Supplies",
+      "categories": 418,
+      "attributes": 110
+    },
+    {
+      "prefix": "aa",
+      "name": "Apparel & Accessories",
+      "categories": 663,
+      "attributes": 343
+    },
+    {
+      "prefix": "ae",
+      "name": "Arts & Entertainment",
+      "categories": 1257,
+      "attributes": 2076
+    },
+    {
+      "prefix": "bt",
+      "name": "Baby & Toddler",
+      "categories": 252,
+      "attributes": 147
+    },
+    {
+      "prefix": "bu",
+      "name": "Bundles",
+      "categories": 1,
+      "attributes": 0
+    },
+    {
+      "prefix": "bi",
+      "name": "Business & Industrial",
+      "categories": 594,
+      "attributes": 207
+    },
+    {
+      "prefix": "co",
+      "name": "Cameras & Optics",
+      "categories": 212,
+      "attributes": 116
+    },
+    {
+      "prefix": "el",
+      "name": "Electronics",
+      "categories": 1176,
+      "attributes": 775
+    },
+    {
+      "prefix": "fb",
+      "name": "Food, Beverages & Tobacco",
+      "categories": 764,
+      "attributes": 483
+    },
+    {
+      "prefix": "fr",
+      "name": "Furniture",
+      "categories": 474,
+      "attributes": 209
+    },
+    {
+      "prefix": "gc",
+      "name": "Gift Cards",
+      "categories": 1,
+      "attributes": 0
+    },
+    {
+      "prefix": "ha",
+      "name": "Hardware",
+      "categories": 1122,
+      "attributes": 242
+    },
+    {
+      "prefix": "hb",
+      "name": "Health & Beauty",
+      "categories": 906,
+      "attributes": 669
+    },
+    {
+      "prefix": "hg",
+      "name": "Home & Garden",
+      "categories": 2286,
+      "attributes": 1089
+    },
+    {
+      "prefix": "lb",
+      "name": "Luggage & Bags",
+      "categories": 37,
+      "attributes": 31
+    },
+    {
+      "prefix": "ma",
+      "name": "Mature",
+      "categories": 37,
+      "attributes": 9
+    },
+    {
+      "prefix": "me",
+      "name": "Media",
+      "categories": 38,
+      "attributes": 29
+    },
+    {
+      "prefix": "os",
+      "name": "Office Supplies",
+      "categories": 243,
+      "attributes": 125
+    },
+    {
+      "prefix": "pa",
+      "name": "Product Add-Ons",
+      "categories": 8,
+      "attributes": 0
+    },
+    {
+      "prefix": "rc",
+      "name": "Religious & Ceremonial",
+      "categories": 13,
+      "attributes": 3
+    },
+    {
+      "prefix": "se",
+      "name": "Services",
+      "categories": 56,
+      "attributes": 6
+    },
+    {
+      "prefix": "so",
+      "name": "Software",
+      "categories": 49,
+      "attributes": 50
+    },
+    {
+      "prefix": "sg",
+      "name": "Sporting Goods",
+      "categories": 3080,
+      "attributes": 1655
+    },
+    {
+      "prefix": "tg",
+      "name": "Toys & Games",
+      "categories": 271,
+      "attributes": 374
+    },
+    {
+      "prefix": "na",
+      "name": "Uncategorized",
+      "categories": 1,
+      "attributes": 0
+    },
+    {
+      "prefix": "vp",
+      "name": "Vehicles & Parts",
+      "categories": 647,
+      "attributes": 1145
+    }
+  ]
+}

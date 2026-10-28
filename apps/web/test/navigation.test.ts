@@ -30,13 +30,14 @@ describe('role-driven navigation', () => {
     }
   });
 
-  it('the platform admin sees users, audit and shared configuration (R1)', () => {
+  it('the platform admin sees users, audit and shared configuration (R1, R1.1)', () => {
     expect(hrefs('platform_admin')).toEqual([
       '/admin',
       '/admin/users',
       '/admin/roles',
       '/admin/audit',
       '/admin/library',
+      '/admin/standards',
       '/admin/flags',
       '/admin/workgroups',
     ]);

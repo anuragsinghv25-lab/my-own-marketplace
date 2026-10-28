@@ -11,6 +11,7 @@ export type IconName =
   | 'shield'
   | 'scroll'
   | 'library'
+  | 'globe'
   | 'flag'
   | 'network'
   | 'tree'
@@ -44,6 +45,7 @@ const NAV: Record<Area, NavItem[]> = {
     { href: '/admin/roles', label: 'Roles', icon: 'shield', requires: ['read', 'RoleGrant'] },
     { href: '/admin/audit', label: 'Audit log', icon: 'scroll', requires: ['read', 'AuditEvent'] },
     { href: '/admin/library', label: 'Attribute library', icon: 'library', requires: ['read', 'AttributeLibrary'] },
+    { href: '/admin/standards', label: 'Standard taxonomies', icon: 'globe', requires: ['create', 'StandardTaxonomy'] },
     { href: '/admin/flags', label: 'Flags & profiles', icon: 'flag', requires: ['read', 'FlagProfile'] },
     { href: '/admin/workgroups', label: 'Workgroups', icon: 'network', requires: ['read', 'Workgroup'] },
   ],

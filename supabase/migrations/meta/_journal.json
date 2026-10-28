@@ -43,6 +43,20 @@
       "when": 1793185182323,
       "tag": "20261028105942_library_seed_and_security",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793200331365,
+      "tag": "20261028151211_standard_taxonomy",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793200332701,
+      "tag": "20261028151212_standard_taxonomy_data",
+      "breakpoints": true
     }
   ]
 }
