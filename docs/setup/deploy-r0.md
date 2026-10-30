@@ -150,6 +150,7 @@ enable *Require a pull request before merging* and *Require status checks to pas
 | --- | --- |
 | R0.1 | Admin → Users → *Rebuild demo team* if you used the old demo accounts |
 | R1.1 | The migration renames custom category codes (`10101510-01` → `C10.10.15.10.01`) and turns old L5 nodes into listing categories; nothing to do. Then Admin → **Standard taxonomies** → *Load Shopify 2026-10* (a few seconds). Optional: download the UNSPSC codeset (Excel) and upload it on the same page |
+| R2 | Nothing to do: the migration adds the configuration tables. Category managers open **Category versions** (or *Configure* on a listing category in the tree) |
 
 ## Troubleshooting
 

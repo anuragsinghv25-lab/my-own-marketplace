@@ -45,8 +45,8 @@ The detailed scope of every release is in **[docs/releases](../releases/README.m
 
 ## Immediate next steps
 
-R0, R0.1, R1 and R1.1 are built and deployed. Next:
+R0 to R2 (with R0.1 and R1.1) are built. Next:
 
-1. Load the Shopify taxonomy (Admin › Standard taxonomies) and, if procurement reporting is needed, upload a UNSPSC file.
-2. Rebuild the pilot categories by adopting from the standards; keep custom ones only where no standard fits.
-3. Build **R2** (configuration studio and Category Contract), starting each spec sheet from the category attribute set.
+1. Configure the pilot categories in the studio: adopt from Shopify, start specs from the attribute set, add rules and test cases, compile.
+2. Build **R3** (category approval and publishing): submit a compiled version, approver review with the contract diff, schedule and publish. Separation of duties uses the editor list R2 records.
+3. Before real data: separate preview and production databases.

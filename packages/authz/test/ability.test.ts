@@ -150,6 +150,7 @@ describe('scope and conditions', () => {
     expect(a.can('update', subject('CategoryVersion', { workgroupId: WG_A, state: 'DRAFT' }))).toBe(true);
     expect(a.can('update', subject('CategoryVersion', { workgroupId: WG_B, state: 'DRAFT' }))).toBe(false);
     expect(a.can('update', subject('CategoryVersion', { workgroupId: WG_A, state: 'PUBLISHED' }))).toBe(false);
+    expect(a.can('update', subject('CategoryVersion', { workgroupId: WG_A, state: 'SENT_BACK' }))).toBe(true);
     expect(a.can('submit', subject('CategoryVersion', { workgroupId: WG_B, state: 'DRAFT' }))).toBe(false);
   });
 

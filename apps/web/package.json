@@ -17,6 +17,8 @@
     "@fontsource-variable/inter": "^5.3.0",
     "@orbita/audit": "workspace:*",
     "@orbita/authz": "workspace:*",
+    "@orbita/category-config": "workspace:*",
+    "@orbita/contract": "workspace:*",
     "@orbita/db": "workspace:*",
     "@orbita/domain": "workspace:*",
     "@orbita/identity": "workspace:*",

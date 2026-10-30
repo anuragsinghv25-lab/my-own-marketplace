@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   AlertTriangle,
@@ -381,8 +382,9 @@ function NodeDetail({
             <div className="flex-1 min-w-[200px]">
               <span className="font-medium">Draft v{node.draft.version}</span> · {node.draft.state.toLowerCase()} · assigned to{' '}
               {node.draft.assigneeName || 'a category manager'}
-              <div className="text-xs text-mute">Configuring flags and specifications arrives in R2, starting from the attributes below.</div>
+              <div className="text-xs text-mute">Flags, specifications and rules start from the attributes below.</div>
             </div>
+            <Link href={`/workbench/versions/${node.draft.id}`} className="text-sm font-medium text-accent hover:underline">Configure</Link>
           </div>
         ) : null}
       </Card>

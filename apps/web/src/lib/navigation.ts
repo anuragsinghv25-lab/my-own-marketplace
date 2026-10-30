@@ -52,7 +52,7 @@ const NAV: Record<Area, NavItem[]> = {
   Workbench: [
     { href: '/workbench', label: 'Home', icon: 'home', requires: ['access', 'Workbench'] },
     { href: '/workbench/taxonomy', label: 'Category tree', icon: 'tree', requires: ['read', 'CategoryNode'] },
-    { href: '/workbench/versions', label: 'Category versions', icon: 'layers', requires: ['read', 'CategoryVersion'], release: 'R2' },
+    { href: '/workbench/versions', label: 'Category versions', icon: 'layers', requires: ['read', 'CategoryVersion'] },
     { href: '/workbench/approvals', label: 'Approvals', icon: 'stamp', requires: ['approve', 'CategoryVersion'], release: 'R3' },
   ],
   ReviewDesk: [

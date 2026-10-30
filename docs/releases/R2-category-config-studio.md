@@ -2,7 +2,7 @@
 
 **Goal:** a drafter and checker can fully configure a category (flags, specs, rules) by **reviewing and adjusting inherited defaults instead of typing everything**, and see exactly what sellers will get, because the configuration compiles into a Category Contract.
 
-**Depends on:** R1, R1.1. **Indicative size:** 3–4 sprints (the largest and most important release).
+**Depends on:** R1, R1.1. **Indicative size:** 3–4 sprints (the largest and most important release). **Status:** built (see *As built* below; roles use the R0.1 model, so "drafter" and "checker" are both the category manager).
 
 > **R1.1 impact:** every listing category now arrives with an **attribute set** (own plus inherited, often adopted from Shopify with value lists). The spec builder starts from that set instead of an empty sheet, so most of a drafter's work becomes reviewing and narrowing (allowed-value subsets, importance, grouping) rather than picking attributes one by one.
 
@@ -62,8 +62,25 @@ Formal approval and publishing (R3). AI-drafted specs (R9).
 
 ## Exit demo
 
-1. Checker opens Gaming laptops v0, applies the "Branded electronics" profile; only 6 flags show as needing a decision.
-2. Adds 12 specs from the library in two minutes; sets Processor to super-golden, RAM golden "higher is better", RGB keyboard optional.
+1. The category manager opens Gaming laptops v0 and applies the "Branded electronics" profile; the flags view shows only what was set here or still needs a decision.
+2. Adds the category's attribute set in one click (Processor, RAM, Display size, Graphics card, Refresh rate), adds RGB keyboard from the library, makes Processor and RAM key specs ("higher is better"), RAM a variant option with 4–128 GB in steps of 4, and RGB keyboard optional.
 3. Adds a rule: Processor = AMD → GPU options limited to AMD/NVIDIA list; the simulator shows it working.
 4. Sets discount band 5–40% off MRP; the preview's price field shows the band.
-5. A contract test case "RAM = 4 GB" fails as expected (RAM ≥ 8 rule).
+5. A contract test case "RAM = 4 GB" fails as expected (RAM ≥ 8 rule); compiling stores the contract with its hash and both test cases behave as expected.
+
+## As built
+
+| Item | Decision |
+| --- | --- |
+| Rules | **Typed rules compiled into the contract** ([ADR 0010](../adr/0010-typed-rules-in-the-contract.md)), not a general rules engine. Four kinds: *limit values* (a list subset or a number range), *make required*, *hide*, *price band*; each with up to five AND conditions (is one of, is not one of, at least, at most, between, yes, no, filled in). Every rule is shown as a plain sentence, the same sentence sellers and reviewers see |
+| Compiler checks | Unknown specs, conditions that can never all be true, values outside the list, numbers outside library bounds, key specs that a rule hides, rules that contradict each other **only when they can apply together** (require vs hide, disjoint value limits, disjoint number or price bands), hide loops, unknown title tokens, flags that still need a decision, more than 3 variant options. Switched-off rules only warn |
+| Importance | Clearer than GeM's golden/super-golden: **Key spec** (identifies the product: required, in titles and duplicate checks; up to 5), **Required**, **Recommended** (counts towards listing quality), **Optional**; plus *buyer filter*, *shown in comparisons*, *variant option* (for R5) and *higher/lower is better* |
+| Contract | `@orbita/contract` (pure TypeScript, no framework): fields, groups, rules with sentences, title template, buyer filters with range buckets, variant options, offer terms (selling units, price label, discount band, images, certificates, allowed sellers), a flags snapshot, and **JSON Schemas** for product facts and offer. Hash = SHA-256 of the canonical JSON; the same configuration always gives the same hash. Stored rows are immutable (database trigger) |
+| One evaluator | `evaluate(contract, sample)` decides visibility, requirements, allowed values, number bounds, price band (rules plus discount off MRP), title and a listing-quality score. The seller-form preview, the compiler's test cases and (from R5) the server all use it. A property test checks it agrees with the generated JSON Schema on 2,000 random products |
+| Live preview | The seller's form is generated from the contract by a renderer R5 reuses, beside the generated title, listing quality, the rules in play and the buyer filter panel. Any filled form can be saved as a test case that must pass or be rejected |
+| Draft safety | One editor at a time: opening the editor takes a lock, which another category manager can take over after 15 minutes without changes (audited). Every change is saved immediately with before/after in the version's history. Everyone who edits is recorded on the version so R3 can stop them from approving it |
+| Spec defaults | "Add from the attribute set" turns the R1.1 attribute set (own and inherited) into specs: required attributes become *Required*, others *Recommended*; list and number specs become buyer filters |
+| Copy and assign | Copy specs, rules, flags and profile, title or test cases from any version you can read; reassign to another category manager of that part of the tree |
+| API | `GET /api/v1/category-versions/{id}/contract` returns the latest compiled contract with its hash |
+| Not built | Spec import/export by spreadsheet (F2.9), per-field comments between drafter and checker (moved to R3's review engine), range sets for discrete display (F2.6 partly: filters get automatic buckets), certificate rules per spec value (with R5 certificates), quantity discount slabs and buyer groups flags (later flags, no code needed when defined) |
+| Out of scope (decided) | **Services** listing categories: the marketplace lists physical products only. Government-specific procurement features are configurable flags, not built-in behaviour |

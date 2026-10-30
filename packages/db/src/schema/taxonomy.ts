@@ -138,6 +138,17 @@ export const categoryVersions = pgTable(
     version: integer('version').notNull(),
     state: categoryVersionState('state').notNull().default('DRAFT'),
     assigneeId: uuid('assignee_id'),
+    /** R2: the flag profile applied, and the profile version it was applied at */
+    profileId: uuid('profile_id'),
+    profileVersion: integer('profile_version'),
+    /** R2: product title template, e.g. "{brand} {model} {processor} {ram_gb}" */
+    titleTemplate: text('title_template').notNull().default(''),
+    /** R2: one editor at a time; the lock expires after inactivity */
+    lockedBy: uuid('locked_by'),
+    lockedAt: timestamp('locked_at', { withTimezone: true }),
+    /** everyone who changed this version: they may not approve it (separation of duties, R3) */
+    editorIds: uuid('editor_ids').array().notNull().default(sql`'{}'::uuid[]`),
+    updatedBy: uuid('updated_by'),
     createdBy: uuid('created_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

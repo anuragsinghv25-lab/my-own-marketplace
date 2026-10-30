@@ -57,6 +57,20 @@
       "when": 1793200332701,
       "tag": "20261028151212_standard_taxonomy_data",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793330794985,
+      "tag": "20261030032634_category_config",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793330796157,
+      "tag": "20261030032636_category_config_security",
+      "breakpoints": true
     }
   ]
 }
