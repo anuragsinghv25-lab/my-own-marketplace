@@ -98,10 +98,10 @@ What a contract contains:
 | --- | --- | --- |
 | `productSchema` (JSON Schema) | spec definitions, attribute datatypes, value lists, units, regex | API validation, AI extraction target, bulk upload validation |
 | `offerSchema` (JSON Schema) | pricing / stock / serviceability flags | offer editor, bulk price & stock update |
-| `uiSchema` | spec groups, ordering, hints, importance badges, conditional visibility | seller form renderer (one generic renderer for all categories) |
-| `rules` (decision graphs) | dependency rules, price bounds, certificate applicability, discount bands, risk inputs | API, form (live hints), review checks |
+| `fields` + `groups` | spec definitions in display order: kind, options, units, bounds, importance, hints | seller form renderer (one generic renderer for all categories) |
+| `rules` (typed: limit values, require, hide, price band; each with a plain-language sentence) | dependency and price rules ([ADR 0010](../adr/0010-typed-rules-in-the-contract.md)) | `evaluate()` in the form, server, test cases; also compiled into `productSchema` as if/then |
 | `titleTemplate` | custom title format | title generator |
-| `filters` | importance (filterable / L1-impacting), preference direction, range display | search and buyer filters (later) |
+| `filters`, `variantOptions`, `offer` | filterable specs with range buckets; variant options (R5); selling units, price label, discount band, image and certificate terms | search and buyer filters (later), offer editor |
 | `flagsSnapshot` | every flag value, resolved from profile + overrides | anything that needs a raw flag |
 | `hash` + `version` | whole contract | pinning, caching, diffing |
 

@@ -68,4 +68,4 @@ flowchart LR
 
 ## Out of scope for all ten releases
 
-Buyer checkout, orders, payments, invoicing, bidding/tenders, contract management, and logistics. The platform is designed to plug them in later (buying-mode flags and offer data are already modelled), but they are a separate programme of work.
+**Services** listing categories (decided 2026-10-30: Orbita lists physical products). Buyer checkout, orders, payments, invoicing, bidding/tenders, contract management, and logistics. The platform is designed to plug them in later (buying-mode flags and offer data are already modelled), but they are a separate programme of work.

@@ -6,15 +6,15 @@ Orbita is a multi-role marketplace platform for governed product catalogs: admin
 
 ## Status
 
-**R0, R0.1, R1 and R1.1 built**: login for 8 roles, role-driven Orbita shell, users/roles/audit, the attribute library
+**R0, R0.1, R1, R1.1 and R2 built**: login for 8 roles, role-driven Orbita shell, users/roles/audit, the attribute library
 (attributes, value lists, units, certificates, flags and flag profiles), a variable-depth category tree (groups and listing
 categories) with aliases, workgroups and per-category attribute sets, adoption from the **Shopify Standard Product Taxonomy**
-and **UNSPSC**, `/api/v1` with OpenAPI, CI. Next: R2 (category configuration studio). **Deploying it:** [docs/setup/deploy-r0.md](docs/setup/deploy-r0.md).
+and **UNSPSC**, the **category configuration studio** (flags and profiles, specifications, typed rules, live seller-form preview, test cases) compiling each version into a hashed **Category Contract**, `/api/v1` with OpenAPI, CI. Next: R3 (category approval and publishing). **Deploying it:** [docs/setup/deploy-r0.md](docs/setup/deploy-r0.md).
 
 | Path | What it is |
 | --- | --- |
 | [`apps/web/`](apps/web) | Next.js app (pages, `/api/v1` route handlers, adapters to Supabase and Resend) |
-| [`packages/`](packages) | `ui` (Orbita design system), `authz` (roles + CASL), `db` (Drizzle schema), `domain`, `modules/{identity,audit,library,standards,taxonomy}` |
+| [`packages/`](packages) | `ui` (Orbita design system), `authz` (roles + CASL), `db` (Drizzle schema), `domain`, `contract` (Category Contract compiler and evaluator), `modules/{identity,audit,library,standards,taxonomy,category-config}` |
 | [`supabase/`](supabase/README.md) | SQL migrations and local Supabase config |
 | [`docs/setup/deploy-r0.md`](docs/setup/deploy-r0.md) | Step-by-step: Supabase, Vercel, domain, email |
 | [`docs/architecture/`](docs/architecture/README.md) | Technical architecture: scope, roles, domain model, system design, workflows, tech stack, AI, roadmap |
@@ -50,7 +50,7 @@ Checks: `pnpm lint`, `pnpm typecheck`, `pnpm test` (set `TEST_DATABASE_URL` to r
 
 ## Stack
 
-TypeScript monorepo (pnpm + Turborepo) · Next.js + React + Tailwind (Orbita design tokens) deployed on **Vercel** · API as Next.js route handlers over framework-free modules · Vercel Workflows + Cron for background jobs · **Supabase** Postgres (JSONB, full-text, pgvector), Auth and Storage · Drizzle · CASL authorisation · GoRules ZEN for rules · provider-agnostic AI gateway. Services and costs: [09 · Deployment](docs/architecture/09-deployment-and-services.md). Details and reasoning in [06 · Tech stack](docs/architecture/06-tech-stack.md).
+TypeScript monorepo (pnpm + Turborepo) · Next.js + React + Tailwind (Orbita design tokens) deployed on **Vercel** · API as Next.js route handlers over framework-free modules · Vercel Workflows + Cron for background jobs · **Supabase** Postgres (JSONB, full-text, pgvector), Auth and Storage · Drizzle · CASL authorisation · typed category rules compiled into a Category Contract · provider-agnostic AI gateway. Services and costs: [09 · Deployment](docs/architecture/09-deployment-and-services.md). Details and reasoning in [06 · Tech stack](docs/architecture/06-tech-stack.md).
 
 ## Releases
 

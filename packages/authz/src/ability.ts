@@ -124,7 +124,7 @@ export function defineAbilityFor({ userId, grants }: AbilityInput): AppAbility {
         can('access', 'Workbench');
         can('read', READ_CONFIG);
         allow(['create', 'update'], 'CategoryNode');
-        allow(['update', 'submit', 'assign'], 'CategoryVersion', { state: 'DRAFT' });
+        allow(['update', 'submit', 'assign'], 'CategoryVersion', { state: { $in: ['DRAFT', 'SENT_BACK'] } });
         allow('update', 'CategoryVersion', { state: 'IN_REVIEW' }); // withdraw from review
         break;
 

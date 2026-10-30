@@ -15,10 +15,13 @@ Decisions we need before or during R0–R2. Each has a default we will use if no
 | Q9 | AI provider | One provider · Gateway with per-task models | **Gateway**, one provider configured initially |
 | Q10 | Hosting target | ~~Open~~ **Decided:** Vercel + Supabase, Mumbai regions ([ADR 0008](../adr/0008-vercel-and-supabase.md)) | — |
 | Q11 | Languages | English only · English + Hindi | **English**, i18n plumbing from R0 |
-| Q12 | Rules engine | GoRules ZEN · json-rules-engine · code | **ZEN** pending the checks in ADR 0007 |
+| Q12 | Rules engine | ~~GoRules ZEN · json-rules-engine · code~~ **Decided (R2):** typed rules compiled into the contract ([ADR 0010](../adr/0010-typed-rules-in-the-contract.md)) | — |
 
 | Q13 | Shopify release cadence | Follow every release · Pin and upgrade yearly | **Follow each stable release** (about twice a year): regenerate the bundle, admin clicks Update, category team reviews the diff in R6 |
 | Q14 | UNSPSC licence | Upload per deployment · Ship with Orbita | **Upload per deployment**; the operator confirms their UNSPSC terms of use |
+
+| Q15 | Services categories (manpower, maintenance, cab hiring) | In scope · Later · Never | **Decided (2026-10-30): out of scope.** Orbita lists physical products |
+| Q16 | Pilot operator | Government portal · General marketplace | **Decided (2026-10-30): a general marketplace**, no government pilot. Procurement-style rules (MSE preference, land-border) remain configurable flags |
 
 ## Brainstorm parking lot
 

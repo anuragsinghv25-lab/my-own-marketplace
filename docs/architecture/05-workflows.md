@@ -31,7 +31,7 @@ const brandReview: ReviewDefinition = {
     red:   { reviewers: ['brand_specialist', 'agency_manager'] },
   },
   escalation: ['marketplace_manager', 'committee_member'],
-  riskRules: 'rules/brand-risk.json',      // ZEN decision graph
+  riskRules: 'rules/brand-risk.json',      // typed risk rules (R8)
   checks: ['prohibited_name', 'trademark_owner_match', 'duplicate_brand'],
   sla: { amber: 'P2D', red: 'P5D' },        // ISO-8601 durations; timers run as Vercel Workflows
   sendBackTo: 'previous_actor',

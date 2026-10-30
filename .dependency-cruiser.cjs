@@ -14,7 +14,7 @@ module.exports = {
       name: 'modules-are-framework-free',
       comment: 'Business modules must not depend on Next.js, React or Supabase SDKs; adapters live in apps/web.',
       severity: 'error',
-      from: { path: '^packages/(modules|domain|authz|db)/' },
+      from: { path: '^packages/(modules|domain|authz|db|contract)/' },
       to: { path: 'node_modules/(next|react|react-dom|@supabase)/' },
     },
     {

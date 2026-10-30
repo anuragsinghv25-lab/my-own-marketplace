@@ -1,6 +1,6 @@
 # 0007 · Business rules as data with GoRules ZEN
 
-- **Status:** Proposed
+- **Status:** Superseded by [ADR 0010](0010-typed-rules-in-the-contract.md) (2026-10-30)
 - **Date:** 2026-10-27
 
 ## Context

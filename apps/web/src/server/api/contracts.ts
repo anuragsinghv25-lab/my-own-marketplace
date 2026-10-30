@@ -237,6 +237,19 @@ export const contracts = {
       ),
     }),
   },
+  categoryContract: {
+    method: 'GET',
+    path: '/api/v1/category-versions/{id}/contract',
+    summary: 'The latest compiled Category Contract of a version: fields, rules, filters, offer terms and JSON Schemas, with its hash',
+    tag: 'Category configuration',
+    auth: 'session',
+    params: idParams,
+    response: z.object({
+      hash: z.string().regex(/^[0-9a-f]{64}$/),
+      compiledAt: isoDate,
+      contract: z.record(z.string(), z.unknown()),
+    }),
+  },
 } satisfies Record<string, Contract>;
 
 export type ContractName = keyof typeof contracts;

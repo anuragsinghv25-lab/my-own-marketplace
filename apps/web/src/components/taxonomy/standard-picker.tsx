@@ -48,17 +48,18 @@ export function StandardPicker({
   const startAt = under?.externalId && under.source === source ? [{ id: under.externalId, name: under.name ?? under.label }] : [];
   const [selected, setSelected] = useState<string | null>(null);
 
+  const fromStandard = !!under?.source && under.source !== 'custom';
   useEffect(() => {
     let live = true;
     standardsStatusAction().then((s) => {
       if (!live) return;
       setStatus(s);
-      if (!under?.source && !s.find((x) => x.source === 'shopify')?.categoryCount && s.find((x) => x.source === 'unspsc')?.categoryCount) setSource('unspsc');
+      if (!fromStandard && !s.find((x) => x.source === 'shopify')?.categoryCount && s.find((x) => x.source === 'unspsc')?.categoryCount) setSource('unspsc');
     });
     return () => {
       live = false;
     };
-  }, []);
+  }, [fromStandard]);
   const current = status?.find((s) => s.source === source);
 
   return (

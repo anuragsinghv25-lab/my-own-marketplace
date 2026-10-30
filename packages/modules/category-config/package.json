@@ -1,0 +1,33 @@
+{
+  "name": "@orbita/category-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@orbita/audit": "workspace:*",
+    "@orbita/authz": "workspace:*",
+    "@orbita/contract": "workspace:*",
+    "@orbita/db": "workspace:*",
+    "@orbita/domain": "workspace:*",
+    "@orbita/library": "workspace:*",
+    "@orbita/taxonomy": "workspace:*",
+    "drizzle-orm": "^0.45.4",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@orbita/config": "workspace:*",
+    "@orbita/identity": "workspace:*",
+    "@orbita/standards": "workspace:*",
+    "@types/node": "^22.10.0",
+    "postgres": "^3.4.9",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.12"
+  }
+}

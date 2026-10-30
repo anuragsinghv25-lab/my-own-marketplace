@@ -17,6 +17,8 @@ const nextConfig: NextConfig = {
     '@orbita/audit',
     '@orbita/identity',
     '@orbita/library',
+    '@orbita/contract',
+    '@orbita/category-config',
     '@orbita/standards',
     '@orbita/taxonomy',
   ],

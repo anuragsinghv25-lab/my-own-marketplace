@@ -24,12 +24,12 @@ export default async function Page() {
     >
       {session.ability.can('update', 'CategoryVersion') ? (
         <Card className="mb-4">
-          <CardHeader title="Assigned to you" description="Category drafts waiting for you. Configuring them arrives in R2." />
+          <CardHeader title="Assigned to you" description="Category versions waiting for you to configure." />
           {drafts.length ? (
             <ul className="divide-y divide-line border-t border-line">
               {drafts.map((d) => (
                 <li key={d.id}>
-                  <Link href={`/workbench/taxonomy?node=${d.nodeId}`} className="flex items-center gap-3 px-5 py-3 hover:bg-soft/60">
+                  <Link href={`/workbench/versions/${d.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-soft/60">
                     <FileClock size={18} className="text-warn shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium truncate">{d.path.split(' › ').at(-1)}</div>
