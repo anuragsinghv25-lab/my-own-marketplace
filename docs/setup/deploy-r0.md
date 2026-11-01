@@ -13,7 +13,7 @@ flowchart LR
   F --> G[7 · Sentry +<br/>branch protection]
 ```
 
-Steps 1–4 give you a working app at `https://<project>.vercel.app`. Steps 5–7 make it production-grade.
+Steps 1–4 give you a working app at `https://<project>.vercel.app`. Steps 5–7 make it production-grade. Step 8 gives pull-request previews their own database.
 
 ---
 
@@ -132,6 +132,40 @@ appear in Sentry with the user id and request id.
 **Protect `main`** on GitHub: repository → Settings → **Rules → Rulesets → New branch ruleset** → target `main` →
 enable *Require a pull request before merging* and *Require status checks to pass* → add **Lint, typecheck, test, build**.
 
+## 8 · Separate preview database (do this once, before R3)
+
+Every pull request gets a preview deployment, and every preview build runs the migrations. While previews share
+the production database, an unmerged pull request can change the production schema. Give previews their own
+Supabase project. It takes about 15 minutes and stays on the free plan (two free projects are allowed).
+
+**The safety net is already in the code.** Each production build stamps its database as *production*. A preview
+build that finds that stamp skips migrations and logs `[migrate] Skipped: this preview build is connected to the
+production database`. Production stays safe even before you finish these steps, but previews of new releases
+will show errors on new screens until they have their own database.
+
+1. **Create the preview project.** Supabase → *New project*:
+   - **Name:** `orbita-preview`
+   - **Region:** South Asia (Mumbai)
+   - **Database password:** letters and digits only, 20+ characters (a different one from production)
+
+   Then repeat step 1.2: Authentication → Sign In / Providers → Email → *Allow new users to sign up* **off**.
+2. **Copy its four values** the same way as step 1.3: `NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `DATABASE_URL` (Transaction pooler, port 6543).
+3. **Split the variables in Vercel.** Project → Settings → **Environment Variables**. For each of those four keys:
+   - open the existing entry (⋯ → *Edit*), untick **Preview** and **Development**, leaving only **Production**, and save;
+   - *Add* the same key again with the preview project's value, ticking only **Preview**.
+
+   Also add `SETUP_TOKEN` (any long random string) for **Preview** only.
+4. **Allow sign-in links on preview URLs.** In the preview Supabase project → Authentication → **URL
+   Configuration** → *Redirect URLs* → add `https://*.vercel.app/**`.
+5. **Build a preview.** Open any open pull request and push a commit, or Vercel → Deployments → a preview →
+   **Redeploy**. The build log should show `[migrate] Up to date`, not *Skipped*.
+6. **Create the preview admin.** Open `<preview URL>/setup`, enter the preview `SETUP_TOKEN`, and create the admin
+   with the demo team. Preview data is throwaway: you can reset it any time from Supabase.
+
+Check: the production build log keeps showing `[migrate] Up to date`. If a production build fails with *stamped
+"preview"*, the Production `DATABASE_URL` points at the preview project; fix the variable and redeploy.
+
 ---
 
 ## What runs where
@@ -139,8 +173,8 @@ enable *Require a pull request before merging* and *Require status checks to pas
 | Piece | Service | Notes |
 | --- | --- | --- |
 | Web app and `/api/v1` | Vercel (Mumbai `bom1`) | Every PR gets a preview URL |
-| Database, logins | Supabase (Mumbai) | One database shared by previews and production for now |
-| Migrations | Vercel build (`pnpm run vercel-build`) | Applied before each build. Keep them additive. |
+| Database, logins | Supabase (Mumbai) | Production and previews each have their own project (see *Separate preview database*) |
+| Migrations | Vercel build (`pnpm run vercel-build`) | Applied before each build. Keep them additive. A preview build that reaches the production database skips them. |
 | Email | Resend | Without it, admins get copyable invite links |
 | Errors | Sentry + Vercel logs | Logs are JSON lines with a `requestId` |
 
@@ -151,6 +185,7 @@ enable *Require a pull request before merging* and *Require status checks to pas
 | R0.1 | Admin → Users → *Rebuild demo team* if you used the old demo accounts |
 | R1.1 | The migration renames custom category codes (`10101510-01` → `C10.10.15.10.01`) and turns old L5 nodes into listing categories; nothing to do. Then Admin → **Standard taxonomies** → *Load Shopify 2026-10* (a few seconds). Optional: download the UNSPSC codeset (Excel) and upload it on the same page |
 | R2 | Nothing to do: the migration adds the configuration tables. Category managers open **Category versions** (or *Configure* on a listing category in the tree) |
+| Preview split | Step 8 above, once. Production needs nothing: its next build stamps the database |
 
 ## Troubleshooting
 

@@ -9,6 +9,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 import { baselineFromSupabase } from '../src/baseline';
+import { decideMigration, type DeployEnvironment } from '../src/environment';
 import { migrationDatabaseUrl } from '../src/url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -26,6 +27,11 @@ async function main() {
   }
   const sql = postgres(url, { max: 1, prepare: false, onnotice: () => {} });
   try {
+    const decision = await decideMigration(sql, process.env.VERCEL_ENV as DeployEnvironment);
+    if (decision.action === 'skip') {
+      console.warn(`[migrate] Skipped: ${decision.reason}`);
+      return;
+    }
     const started = Date.now();
     const baselined = await baselineFromSupabase(sql, migrationsFolder);
     if (baselined) console.log(`[migrate] ${baselined} migration(s) were already applied by Supabase; recorded them.`);
