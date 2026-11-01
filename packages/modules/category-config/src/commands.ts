@@ -20,6 +20,7 @@ import {
 } from '@orbita/db';
 import { badRequest, conflict, forbidden, notFound, preconditionFailed } from '@orbita/domain';
 import { flagValueProblem } from '@orbita/library';
+import { notify } from '@orbita/notifications';
 import { categoryAttributeSet } from '@orbita/taxonomy';
 import { compileInput, effectiveFlags, LOCK_MINUTES, loadSpecs, loadVersion, versionSubject, type Ctx, type VersionRef } from './load';
 
@@ -49,7 +50,7 @@ async function edit<T>(deps: ConfigDeps, ctx: Ctx, id: string, action: string, f
   return deps.db.transaction(async (tx) => {
     const v = await loadVersion(tx, id, true);
     if (!ctx.ability.can('update', versionSubject(v)))
-      throw forbidden(v.state === 'DRAFT' || v.state === 'SENT_BACK' ? 'You cannot edit this category version.' : `This version is ${v.state.toLowerCase().replace('_', ' ')} and can no longer be edited.`);
+      throw forbidden(v.state === 'DRAFT' || v.state === 'SENT_BACK' ? 'You cannot edit this category version.' : `This version is ${v.state.toLowerCase().replace('_', ' ')} and can no longer be edited.${v.state === 'IN_REVIEW' ? ' Withdraw it from review first.' : ''}`);
     if (lockFresh(v) && v.lockedBy !== ctx.actor.id)
       throw conflict(`${await personName(tx, v.lockedBy!)} is editing this version. Ask them to finish, or take over after ${LOCK_MINUTES} minutes without changes.`);
     const change = await fn(tx, v);
@@ -457,31 +458,37 @@ export async function cloneFrom(deps: ConfigDeps, ctx: Ctx, id: string, sourceId
   return edit(deps, ctx, id, 'config.cloned', async (tx) => {
     const src = await loadVersion(tx, sourceId);
     if (!ctx.ability.can('read', versionSubject(src))) throw forbidden('You cannot read that version.');
-    if (sections.includes('flags')) {
-      await tx.delete(versionFlagValues).where(eq(versionFlagValues.versionId, id));
-      const rows = await tx.select().from(versionFlagValues).where(eq(versionFlagValues.versionId, sourceId));
-      if (rows.length) await tx.insert(versionFlagValues).values(rows.map((r) => ({ versionId: id, flagId: r.flagId, value: r.value })));
-      await tx.update(categoryVersions).set({ profileId: src.profileId, profileVersion: src.profileVersion }).where(eq(categoryVersions.id, id));
-    }
-    if (sections.includes('specs')) {
-      await tx.delete(specDefinitions).where(eq(specDefinitions.versionId, id));
-      const rows = await tx.select().from(specDefinitions).where(eq(specDefinitions.versionId, sourceId));
-      if (rows.length) await tx.insert(specDefinitions).values(rows.map(({ id: _i, versionId: _v, createdAt: _c, updatedAt: _u, ...r }) => ({ ...r, versionId: id })));
-    }
-    if (sections.includes('rules')) {
-      await tx.delete(categoryRules).where(eq(categoryRules.versionId, id));
-      const rows = await tx.select().from(categoryRules).where(eq(categoryRules.versionId, sourceId));
-      if (rows.length)
-        await tx.insert(categoryRules).values(rows.map((r) => ({ versionId: id, kind: r.kind, name: r.name, enabled: r.enabled, definition: r.definition, sortOrder: r.sortOrder, createdBy: ctx.actor.id })));
-    }
-    if (sections.includes('title')) await tx.update(categoryVersions).set({ titleTemplate: src.titleTemplate }).where(eq(categoryVersions.id, id));
-    if (sections.includes('tests')) {
-      await tx.delete(contractTestCases).where(eq(contractTestCases.versionId, id));
-      const rows = await tx.select().from(contractTestCases).where(eq(contractTestCases.versionId, sourceId));
-      if (rows.length) await tx.insert(contractTestCases).values(rows.map((r) => ({ versionId: id, name: r.name, expectation: r.expectation, sample: r.sample, createdBy: ctx.actor.id })));
-    }
+    await copySections(tx, ctx, id, src, sections);
     return { result: null, summary: `copied ${sections.join(', ')} from ${src.node.name} v${src.number}`, after: { sourceId, sections } };
   });
+}
+
+/** The copying itself, also used when R3 starts the next version of a live category. */
+export async function copySections(tx: DbOrTx, ctx: Pick<Ctx, 'actor'>, id: string, src: VersionRef, sections: readonly CloneSection[]) {
+  const sourceId = src.id;
+  if (sections.includes('flags')) {
+    await tx.delete(versionFlagValues).where(eq(versionFlagValues.versionId, id));
+    const rows = await tx.select().from(versionFlagValues).where(eq(versionFlagValues.versionId, sourceId));
+    if (rows.length) await tx.insert(versionFlagValues).values(rows.map((r) => ({ versionId: id, flagId: r.flagId, value: r.value })));
+    await tx.update(categoryVersions).set({ profileId: src.profileId, profileVersion: src.profileVersion }).where(eq(categoryVersions.id, id));
+  }
+  if (sections.includes('specs')) {
+    await tx.delete(specDefinitions).where(eq(specDefinitions.versionId, id));
+    const rows = await tx.select().from(specDefinitions).where(eq(specDefinitions.versionId, sourceId));
+    if (rows.length) await tx.insert(specDefinitions).values(rows.map(({ id: _i, versionId: _v, createdAt: _c, updatedAt: _u, ...r }) => ({ ...r, versionId: id })));
+  }
+  if (sections.includes('rules')) {
+    await tx.delete(categoryRules).where(eq(categoryRules.versionId, id));
+    const rows = await tx.select().from(categoryRules).where(eq(categoryRules.versionId, sourceId));
+    if (rows.length)
+      await tx.insert(categoryRules).values(rows.map((r) => ({ versionId: id, kind: r.kind, name: r.name, enabled: r.enabled, definition: r.definition, sortOrder: r.sortOrder, createdBy: ctx.actor.id })));
+  }
+  if (sections.includes('title')) await tx.update(categoryVersions).set({ titleTemplate: src.titleTemplate }).where(eq(categoryVersions.id, id));
+  if (sections.includes('tests')) {
+    await tx.delete(contractTestCases).where(eq(contractTestCases.versionId, id));
+    const rows = await tx.select().from(contractTestCases).where(eq(contractTestCases.versionId, sourceId));
+    if (rows.length) await tx.insert(contractTestCases).values(rows.map((r) => ({ versionId: id, name: r.name, expectation: r.expectation, sample: r.sample, createdBy: ctx.actor.id })));
+  }
 }
 
 /** Category managers who can work on this version: global ones, and those of its workgroup. */
@@ -517,5 +524,18 @@ export async function assignVersion(deps: ConfigDeps, ctx: Ctx, id: string, assi
       before: { assigneeId: v.assigneeId },
       after: { assigneeId },
     });
+    await notify(
+      tx,
+      [assigneeId],
+      {
+        kind: 'category.assigned',
+        title: `${v.node.name} v${v.number} is assigned to you`,
+        body: `${ctx.actor.fullName || ctx.actor.email} assigned you to configure ${v.node.path.join(' › ')}.`,
+        link: `/workbench/versions/${id}`,
+        subjectType: 'category_version',
+        subjectId: id,
+      },
+      { except: ctx.actor.id },
+    );
   });
 }

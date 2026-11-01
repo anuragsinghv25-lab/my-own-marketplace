@@ -1,11 +1,13 @@
 import { createHash } from 'node:crypto';
 import type { Metadata } from 'next';
 import { acquireLock, assignableManagers, getWorkspace, listVersions, loadVersion, toSpecInput, versionHistory } from '@orbita/category-config';
+import { promoteDue, todayIn, versionReview } from '@orbita/category-publishing';
 import { canonicalJson, fieldsFor } from '@orbita/contract';
 import { getDb } from '@orbita/db';
 import { isAppError } from '@orbita/domain';
 import { notFound } from 'next/navigation';
 import { TabLinks } from '@/components/common/tab-links';
+import { ApprovalTab } from '@/components/config/approval-tab';
 import { FlagsTab } from '@/components/config/flags-tab';
 import { HistoryTab } from '@/components/config/history-tab';
 import { OverviewTab } from '@/components/config/overview-tab';
@@ -20,7 +22,7 @@ import { plain } from '@/lib/plain';
 
 export const metadata: Metadata = { title: 'Configure category' };
 
-const TABS = ['overview', 'flags', 'specs', 'rules', 'preview', 'tests', 'history'] as const;
+const TABS = ['overview', 'flags', 'specs', 'rules', 'preview', 'tests', 'approval', 'history'] as const;
 type Tab = (typeof TABS)[number];
 
 export default async function VersionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
@@ -31,6 +33,7 @@ export default async function VersionPage({ params, searchParams }: { params: Pr
   const tab: Tab = (TABS as readonly string[]).includes(sp.tab ?? '') ? (sp.tab as Tab) : 'overview';
   const db = getDb();
   const ctx = { ...session, meta: await requestMeta() };
+  await promoteDue(db);
 
   let ws: Awaited<ReturnType<typeof getWorkspace>>;
   let lockedOut: string | null = null;
@@ -49,6 +52,8 @@ export default async function VersionPage({ params, searchParams }: { params: Pr
   const assignees = ws.canAssign ? await assignableManagers(db, ref) : [];
   const others = editable ? (await listVersions(db, session)).filter((v) => v.id !== id) : [];
   const errors = ws.draft.issues.filter((i) => i.severity === 'error');
+  const review = await versionReview(db, session, id);
+  const openComments = review.detail?.comments.filter((c) => !c.resolvedAt).length ?? 0;
   const base = `/workbench/versions/${id}`;
 
   return (
@@ -62,6 +67,7 @@ export default async function VersionPage({ params, searchParams }: { params: Pr
         errorCount={errors.length}
         assignees={plain(assignees)}
         others={plain(others.map((o) => ({ id: o.id, label: `${o.path.join(' › ')} · v${o.number}` })))}
+        approval={{ ready: !!review.readiness?.ready && review.canSubmit, sentBack: ws.version.state === 'SENT_BACK', openComments, href: `${base}?tab=approval` }}
       />
       <TabLinks
         base={base}
@@ -73,6 +79,7 @@ export default async function VersionPage({ params, searchParams }: { params: Pr
           { key: 'rules', label: 'Rules', count: ws.rules.length },
           { key: 'preview', label: 'Preview' },
           { key: 'tests', label: 'Test cases', count: ws.tests.length },
+          { key: 'approval', label: 'Approval', count: openComments || undefined },
           { key: 'history', label: 'History' },
         ]}
       />
@@ -82,6 +89,37 @@ export default async function VersionPage({ params, searchParams }: { params: Pr
       {tab === 'rules' ? <RulesTab versionId={id} ws={plain({ rules: ws.rules, fields: [...fieldsFor(ws.specs.map(toSpecInput)).values()], issues: ws.draft.issues })} editable={editable} /> : null}
       {tab === 'preview' ? <PreviewTab versionId={id} contract={plain(ws.contract)} issues={plain(ws.draft.issues)} editable={editable} base={base} /> : null}
       {tab === 'tests' ? <TestsTab versionId={id} tests={plain(ws.tests) as never} lastCompile={plain(ws.lastCompile)} editable={editable} base={base} /> : null}
+      {tab === 'approval' ? (
+        <ApprovalTab
+          versionId={id}
+          today={todayIn()}
+          fields={[...ws.specs.map((x) => ({ key: x.key, label: x.name })), { key: '_rules', label: 'Rules' }, { key: '_title', label: 'Product title' }, { key: '_offer', label: 'Offer terms and flags' }]}
+          data={plain({
+            state: ws.version.state,
+            discardReason: ws.version.discardReason,
+            readiness: review.readiness,
+            schedule: review.schedule ? { sellerGoLive: review.schedule.sellerGoLive, buyerGoLive: review.schedule.buyerGoLive, minCatalogs: review.schedule.minCatalogs, testMode: review.schedule.testMode } : null,
+            canSubmit: review.canSubmit,
+            canWithdraw: review.canWithdraw,
+            canDiscard: review.canDiscard,
+            canReschedule: review.canReschedule,
+            canComment: review.canComment,
+            request: review.detail
+              ? {
+                  id: review.detail.request.id,
+                  state: review.detail.request.state,
+                  attempt: review.detail.request.attempt,
+                  approverName: review.detail.openTask ? (review.detail.tasks.find((t) => t.id === review.detail!.openTask!.id)?.assigneeName ?? null) : null,
+                  dueAt: review.detail.openTask?.dueAt ?? null,
+                  submittedByName: review.detail.submittedByName,
+                  comments: review.detail.comments,
+                  tasks: review.detail.tasks,
+                  decisions: review.detail.decisions,
+                }
+              : null,
+          }) as never}
+        />
+      ) : null}
       {tab === 'history' ? <HistoryTab events={plain(await versionHistory(db, session.ability, id))} /> : null}
     </>
   );

@@ -6,10 +6,10 @@ Orbita is a multi-role marketplace platform for governed product catalogs: admin
 
 ## Status
 
-**R0, R0.1, R1, R1.1 and R2 built**: login for 8 roles, role-driven Orbita shell, users/roles/audit, the attribute library
+**R0 to R3 built**: login for 8 roles, role-driven Orbita shell, users/roles/audit, the attribute library
 (attributes, value lists, units, certificates, flags and flag profiles), a variable-depth category tree (groups and listing
 categories) with aliases, workgroups and per-category attribute sets, adoption from the **Shopify Standard Product Taxonomy**
-and **UNSPSC**, the **category configuration studio** (flags and profiles, specifications, typed rules, live seller-form preview, test cases) compiling each version into a hashed **Category Contract**, `/api/v1` with OpenAPI, CI. Next: R3 (category approval and publishing). **Deploying it:** [docs/setup/deploy-r0.md](docs/setup/deploy-r0.md).
+and **UNSPSC**, the **category configuration studio** (flags and profiles, specifications, typed rules, live seller-form preview, test cases) compiling each version into a hashed **Category Contract**, then **approval and publishing** (review desk with queues, per-field comments, send-back and compare, separation of duties, go-live scheduling for sellers and buyers, category status and downtime, notifications by bell and email), `/api/v1` with OpenAPI, CI. Next: R4 (sellers and brands). **Deploying it:** [docs/setup/deploy-r0.md](docs/setup/deploy-r0.md).
 
 | Path | What it is |
 | --- | --- |

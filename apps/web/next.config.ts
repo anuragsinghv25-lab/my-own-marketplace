@@ -21,6 +21,9 @@ const nextConfig: NextConfig = {
     '@orbita/category-config',
     '@orbita/standards',
     '@orbita/taxonomy',
+    '@orbita/reviews',
+    '@orbita/notifications',
+    '@orbita/category-publishing',
   ],
   poweredByHeader: false,
   async headers() {

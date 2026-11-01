@@ -4,3 +4,4 @@ export * from './standards';
 export * from './library';
 export * from './taxonomy';
 export * from './config';
+export * from './review';

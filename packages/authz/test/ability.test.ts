@@ -210,3 +210,44 @@ describe('home area', () => {
     expect(homeAreaFor([])).toBeNull();
   });
 });
+
+describe('R3 · approval and publishing', () => {
+  const cm = abilityOf(g('category_manager', 'workgroup', WG_A));
+  const ap = abilityOf(g('approver', 'workgroup', WG_A));
+  const admin = abilityOf(g('platform_admin'));
+  const auditor = abilityOf(g('auditor'));
+  const v = (state: string) => subject('CategoryVersion', { workgroupId: WG_A, state, submittedBy: OTHER, editorIds: [OTHER] });
+
+  it('the category team withdraws only while in review, and edits nothing in review', () => {
+    expect(cm.can('withdraw', v('IN_REVIEW'))).toBe(true);
+    expect(cm.can('withdraw', v('DRAFT'))).toBe(false);
+    expect(cm.can('update', v('IN_REVIEW'))).toBe(false);
+    expect(cm.can('discard', v('SENT_BACK'))).toBe(true);
+    expect(cm.can('discard', v('IN_REVIEW'))).toBe(false);
+    expect(cm.can('create', subject('CategoryVersion', { workgroupId: WG_A }))).toBe(true);
+    expect(cm.can('create', subject('CategoryVersion', { workgroupId: WG_B }))).toBe(false);
+  });
+
+  it('approvers reschedule until live; managers cannot', () => {
+    expect(ap.can('schedule', v('SCHEDULED'))).toBe(true);
+    expect(ap.can('schedule', v('PUBLISHED'))).toBe(true);
+    expect(ap.can('schedule', v('SUPERSEDED'))).toBe(false);
+    expect(cm.can('schedule', v('SCHEDULED'))).toBe(false);
+  });
+
+  it('platform admin transfers reviews and edits review rules but never decides; auditor only reads', () => {
+    expect(admin.can('assign', 'ReviewRequest')).toBe(true);
+    expect(admin.can('update', 'ReviewDefinition')).toBe(true);
+    expect(admin.can('approve', v('IN_REVIEW'))).toBe(false);
+    expect(cm.can('assign', 'ReviewRequest')).toBe(false);
+    expect(auditor.can('read', 'ReviewRequest')).toBe(true);
+    expect(auditor.can('comment', 'ReviewRequest')).toBe(false);
+    expect(auditor.can('operate', 'CategoryNode')).toBe(false);
+  });
+
+  it('both sides operate downtime in their scope', () => {
+    expect(cm.can('operate', subject('CategoryNode', { workgroupId: WG_A }))).toBe(true);
+    expect(cm.can('operate', subject('CategoryNode', { workgroupId: WG_B }))).toBe(false);
+    expect(ap.can('operate', subject('CategoryNode', { workgroupId: WG_A }))).toBe(true);
+  });
+});

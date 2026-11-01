@@ -2,7 +2,7 @@ import 'server-only';
 import type { ReactElement } from 'react';
 import { Resend } from 'resend';
 import type { InviteEmail as InvitePayload, Mailer } from '@orbita/identity';
-import { InviteEmail, ResetPasswordEmail, SignInLinkEmail } from '@/emails/templates';
+import { InviteEmail, NotificationEmail, ResetPasswordEmail, SignInLinkEmail } from '@/emails/templates';
 import { env } from './env';
 import { log } from './log';
 
@@ -27,6 +27,7 @@ async function send(to: string, subject: string, react: ReactElement): Promise<{
 export const mailer: Mailer & {
   sendSignInLink(to: string, url: string): Promise<{ delivered: boolean }>;
   sendPasswordReset(to: string, url: string): Promise<{ delivered: boolean }>;
+  sendNotification(to: string, n: { title: string; body: string; url: string | null }): Promise<{ delivered: boolean }>;
 } = {
   sendInvite: (e: InvitePayload) =>
     send(
@@ -38,4 +39,5 @@ export const mailer: Mailer & {
     send(to, `Your ${env.marketplaceName()} sign-in link`, <SignInLinkEmail marketplace={env.marketplaceName()} url={url} />),
   sendPasswordReset: (to, url) =>
     send(to, `Reset your ${env.marketplaceName()} password`, <ResetPasswordEmail marketplace={env.marketplaceName()} url={url} />),
+  sendNotification: (to, n) => send(to, n.title, <NotificationEmail marketplace={env.marketplaceName()} {...n} />),
 };

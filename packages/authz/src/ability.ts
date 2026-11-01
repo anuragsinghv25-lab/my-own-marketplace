@@ -26,7 +26,13 @@ export type Action =
   | 'invite'
   | 'grant'
   | 'revoke'
-  | 'deactivate';
+  | 'deactivate'
+  // R3
+  | 'withdraw'
+  | 'discard'
+  | 'schedule'
+  | 'operate'
+  | 'comment';
 
 export type SubjectType =
   | 'all'
@@ -41,6 +47,8 @@ export type SubjectType =
   | 'Workgroup'
   | 'CategoryNode'
   | 'CategoryVersion'
+  | 'ReviewRequest'
+  | 'ReviewDefinition'
   | 'VendorAssessment'
   | 'BrandRequest'
   | 'Catalog'
@@ -118,20 +126,29 @@ export function defineAbilityFor({ userId, grants }: AbilityInput): AppAbility {
         can('read', 'AuditEvent');
         can(['read', 'create', 'update'], ['AttributeLibrary', 'StandardTaxonomy', 'FlagProfile', 'Workgroup']);
         can('read', ['CategoryNode', 'CategoryVersion']);
+        // R3: runs the review machinery (rules, transfers) but never decides
+        can(['read', 'update'], 'ReviewDefinition');
+        can(['read', 'assign'], 'ReviewRequest');
         break;
 
       case 'category_manager':
         can('access', 'Workbench');
         can('read', READ_CONFIG);
         allow(['create', 'update'], 'CategoryNode');
-        allow(['update', 'submit', 'assign'], 'CategoryVersion', { state: { $in: ['DRAFT', 'SENT_BACK'] } });
-        allow('update', 'CategoryVersion', { state: 'IN_REVIEW' }); // withdraw from review
+        allow(['update', 'submit', 'assign', 'discard'], 'CategoryVersion', { state: { $in: ['DRAFT', 'SENT_BACK'] } });
+        allow('withdraw', 'CategoryVersion', { state: 'IN_REVIEW' }); // pull back before the approver decides
+        allow('create', 'CategoryVersion'); // next version of a live category
+        allow('operate', 'CategoryNode'); // downtime and maintenance windows
+        allow(['read', 'comment'], 'ReviewRequest');
         break;
 
       case 'approver':
         can('access', ['Workbench', 'ReviewDesk']);
         can('read', READ_CONFIG);
-        allow('approve', 'CategoryVersion', { state: 'IN_REVIEW' });
+        allow('approve', 'CategoryVersion', { state: 'IN_REVIEW' }); // approve, send back or discard
+        allow('schedule', 'CategoryVersion', { state: { $in: ['SCHEDULED', 'PUBLISHED'] } }); // reschedule until live
+        allow('operate', 'CategoryNode');
+        allow(['read', 'assign', 'comment'], 'ReviewRequest');
         can(['read', 'approve', 'assign'], ['VendorAssessment', 'BrandRequest', 'Catalog', 'Escalation']);
         can('read', 'Offer');
         break;
@@ -141,6 +158,7 @@ export function defineAbilityFor({ userId, grants }: AbilityInput): AppAbility {
         can(['read', 'approve'], ['VendorAssessment', 'BrandRequest', 'Catalog']);
         can(['read', 'create'], 'Escalation'); // escalate to an approver
         can('read', ['Offer', 'CategoryNode', 'CategoryVersion']);
+        can(['read', 'comment'], 'ReviewRequest');
         break;
 
       case 'auditor':
@@ -178,7 +196,7 @@ export function defineAbilityFor({ userId, grants }: AbilityInput): AppAbility {
   // Auditors never write, whatever else is configured.
   if (grants.some((g) => g.role === 'auditor')) {
     cannot(
-      ['create', 'update', 'submit', 'approve', 'assign', 'invite', 'grant', 'revoke', 'deactivate'],
+      ['create', 'update', 'submit', 'approve', 'assign', 'invite', 'grant', 'revoke', 'deactivate', 'withdraw', 'discard', 'schedule', 'operate', 'comment'],
       'all',
     );
   }

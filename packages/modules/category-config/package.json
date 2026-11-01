@@ -17,6 +17,7 @@
     "@orbita/db": "workspace:*",
     "@orbita/domain": "workspace:*",
     "@orbita/library": "workspace:*",
+    "@orbita/notifications": "workspace:*",
     "@orbita/taxonomy": "workspace:*",
     "drizzle-orm": "^0.45.4",
     "zod": "^4.1.0"

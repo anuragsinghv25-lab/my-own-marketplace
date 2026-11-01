@@ -149,6 +149,13 @@ export const categoryVersions = pgTable(
     /** everyone who changed this version: they may not approve it (separation of duties, R3) */
     editorIds: uuid('editor_ids').array().notNull().default(sql`'{}'::uuid[]`),
     updatedBy: uuid('updated_by'),
+    /** R3: who sent it for approval last (they may not approve it either) */
+    submittedBy: uuid('submitted_by'),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }),
+    /** R3: when sellers first saw it */
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+    /** R3: mandatory reason when discarded */
+    discardReason: text('discard_reason'),
     createdBy: uuid('created_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

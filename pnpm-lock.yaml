@@ -35,6 +35,9 @@ importers:
       '@orbita/category-config':
         specifier: workspace:*
         version: link:../../packages/modules/category-config
+      '@orbita/category-publishing':
+        specifier: workspace:*
+        version: link:../../packages/modules/category-publishing
       '@orbita/contract':
         specifier: workspace:*
         version: link:../../packages/contract
@@ -50,6 +53,12 @@ importers:
       '@orbita/library':
         specifier: workspace:*
         version: link:../../packages/modules/library
+      '@orbita/notifications':
+        specifier: workspace:*
+        version: link:../../packages/modules/notifications
+      '@orbita/reviews':
+        specifier: workspace:*
+        version: link:../../packages/modules/reviews
       '@orbita/standards':
         specifier: workspace:*
         version: link:../../packages/modules/standards
@@ -275,6 +284,9 @@ importers:
       '@orbita/library':
         specifier: workspace:*
         version: link:../library
+      '@orbita/notifications':
+        specifier: workspace:*
+        version: link:../notifications
       '@orbita/taxonomy':
         specifier: workspace:*
         version: link:../taxonomy
@@ -294,6 +306,67 @@ importers:
       '@orbita/standards':
         specifier: workspace:*
         version: link:../standards
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.5
+      postgres:
+        specifier: ^3.4.9
+        version: 3.4.9
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.12
+        version: 4.1.12(@opentelemetry/api@1.10.0)(@types/node@22.20.5)(vite@8.3.5(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+
+  packages/modules/category-publishing:
+    dependencies:
+      '@orbita/audit':
+        specifier: workspace:*
+        version: link:../audit
+      '@orbita/authz':
+        specifier: workspace:*
+        version: link:../../authz
+      '@orbita/category-config':
+        specifier: workspace:*
+        version: link:../category-config
+      '@orbita/contract':
+        specifier: workspace:*
+        version: link:../../contract
+      '@orbita/db':
+        specifier: workspace:*
+        version: link:../../db
+      '@orbita/domain':
+        specifier: workspace:*
+        version: link:../../domain
+      '@orbita/notifications':
+        specifier: workspace:*
+        version: link:../notifications
+      '@orbita/reviews':
+        specifier: workspace:*
+        version: link:../reviews
+      drizzle-orm:
+        specifier: ^0.45.4
+        version: 0.45.4(@opentelemetry/api@1.10.0)(postgres@3.4.9)
+      zod:
+        specifier: ^4.1.0
+        version: 4.6.7
+    devDependencies:
+      '@orbita/config':
+        specifier: workspace:*
+        version: link:../../config
+      '@orbita/identity':
+        specifier: workspace:*
+        version: link:../identity
+      '@orbita/library':
+        specifier: workspace:*
+        version: link:../library
+      '@orbita/standards':
+        specifier: workspace:*
+        version: link:../standards
+      '@orbita/taxonomy':
+        specifier: workspace:*
+        version: link:../taxonomy
       '@types/node':
         specifier: ^22.10.0
         version: 22.20.5
@@ -371,6 +444,71 @@ importers:
       '@orbita/identity':
         specifier: workspace:*
         version: link:../identity
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.5
+      postgres:
+        specifier: ^3.4.9
+        version: 3.4.9
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.12
+        version: 4.1.12(@opentelemetry/api@1.10.0)(@types/node@22.20.5)(vite@8.3.5(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+
+  packages/modules/notifications:
+    dependencies:
+      '@orbita/db':
+        specifier: workspace:*
+        version: link:../../db
+      '@orbita/domain':
+        specifier: workspace:*
+        version: link:../../domain
+      drizzle-orm:
+        specifier: ^0.45.4
+        version: 0.45.4(@opentelemetry/api@1.10.0)(postgres@3.4.9)
+    devDependencies:
+      '@orbita/config':
+        specifier: workspace:*
+        version: link:../../config
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.5
+      postgres:
+        specifier: ^3.4.9
+        version: 3.4.9
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.12
+        version: 4.1.12(@opentelemetry/api@1.10.0)(@types/node@22.20.5)(vite@8.3.5(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+
+  packages/modules/reviews:
+    dependencies:
+      '@orbita/audit':
+        specifier: workspace:*
+        version: link:../audit
+      '@orbita/authz':
+        specifier: workspace:*
+        version: link:../../authz
+      '@orbita/db':
+        specifier: workspace:*
+        version: link:../../db
+      '@orbita/domain':
+        specifier: workspace:*
+        version: link:../../domain
+      drizzle-orm:
+        specifier: ^0.45.4
+        version: 0.45.4(@opentelemetry/api@1.10.0)(postgres@3.4.9)
+      zod:
+        specifier: ^4.1.0
+        version: 4.6.7
+    devDependencies:
+      '@orbita/config':
+        specifier: workspace:*
+        version: link:../../config
       '@types/node':
         specifier: ^22.10.0
         version: 22.20.5

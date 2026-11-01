@@ -250,6 +250,30 @@ export const contracts = {
       contract: z.record(z.string(), z.unknown()),
     }),
   },
+  liveCategory: {
+    method: 'GET',
+    path: '/api/v1/categories/{id}/live',
+    summary: 'What sellers and buyers get for a listing category today: its status, the published version, go-live dates and the approved Category Contract',
+    tag: 'Category publishing',
+    auth: 'session',
+    params: idParams,
+    response: z.object({
+      status: z.object({
+        key: z.enum(['never_live', 'scheduled', 'live', 'live_for_sellers', 'deactivated', 'down_for_buyers', 'down_for_sellers', 'maintenance']),
+        label: z.string(),
+        sellers: z.boolean(),
+        buyers: z.boolean(),
+        testMode: z.boolean(),
+        note: z.string(),
+      }),
+      version: z.number().int().nullable(),
+      schedule: z
+        .object({ sellerGoLive: z.iso.date(), buyerGoLive: z.iso.date(), minCatalogs: z.number().int(), testMode: z.boolean() })
+        .nullable(),
+      hash: z.string().regex(/^[0-9a-f]{64}$/).nullable(),
+      contract: z.record(z.string(), z.unknown()).nullable(),
+    }),
+  },
 } satisfies Record<string, Contract>;
 
 export type ContractName = keyof typeof contracts;

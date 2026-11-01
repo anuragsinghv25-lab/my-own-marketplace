@@ -55,3 +55,18 @@ export function ResetPasswordEmail(props: { marketplace: string; url: string }) 
     </EmailLayout>
   );
 }
+
+export function NotificationEmail(props: { marketplace: string; title: string; body: string; url: string | null }) {
+  return (
+    <EmailLayout marketplace={props.marketplace} preview={props.title}>
+      <Text style={h1}>{props.title}</Text>
+      {props.body ? <Text style={p}>{props.body}</Text> : null}
+      {props.url ? (
+        <Button href={props.url} style={button}>
+          Open in {props.marketplace}
+        </Button>
+      ) : null}
+      <Text style={muted}>You get this email because of your role in {props.marketplace}. The same message is in the bell menu in the app.</Text>
+    </EmailLayout>
+  );
+}
