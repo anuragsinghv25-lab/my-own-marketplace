@@ -22,7 +22,8 @@ export type IconName =
   | 'package'
   | 'tag'
   | 'alert'
-  | 'palette';
+  | 'palette'
+  | 'activity';
 
 export interface NavItem {
   href: string;
@@ -48,15 +49,16 @@ const NAV: Record<Area, NavItem[]> = {
     { href: '/admin/standards', label: 'Standard taxonomies', icon: 'globe', requires: ['create', 'StandardTaxonomy'] },
     { href: '/admin/flags', label: 'Flags & profiles', icon: 'flag', requires: ['read', 'FlagProfile'] },
     { href: '/admin/workgroups', label: 'Workgroups', icon: 'network', requires: ['read', 'Workgroup'] },
+    { href: '/admin/reviews', label: 'Review rules', icon: 'stamp', requires: ['update', 'ReviewDefinition'] },
   ],
   Workbench: [
     { href: '/workbench', label: 'Home', icon: 'home', requires: ['access', 'Workbench'] },
     { href: '/workbench/taxonomy', label: 'Category tree', icon: 'tree', requires: ['read', 'CategoryNode'] },
     { href: '/workbench/versions', label: 'Category versions', icon: 'layers', requires: ['read', 'CategoryVersion'] },
-    { href: '/workbench/approvals', label: 'Approvals', icon: 'stamp', requires: ['approve', 'CategoryVersion'], release: 'R3' },
+    { href: '/workbench/status', label: 'Category status', icon: 'activity', requires: ['read', 'CategoryVersion'] },
   ],
   ReviewDesk: [
-    { href: '/reviews', label: 'Home', icon: 'home', requires: ['access', 'ReviewDesk'] },
+    { href: '/reviews', label: 'Category approvals', icon: 'stamp', requires: ['read', 'ReviewRequest'] },
     { href: '/reviews/vendors', label: 'Vendor assessments', icon: 'building', requires: ['read', 'VendorAssessment'], release: 'R4' },
     { href: '/reviews/brands', label: 'Brand requests', icon: 'badge', requires: ['read', 'BrandRequest'], release: 'R4' },
     { href: '/reviews/catalogs', label: 'Catalog reviews', icon: 'package', requires: ['approve', 'Catalog'], release: 'R5' },

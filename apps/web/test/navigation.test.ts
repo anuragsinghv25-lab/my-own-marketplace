@@ -30,7 +30,7 @@ describe('role-driven navigation', () => {
     }
   });
 
-  it('the platform admin sees users, audit and shared configuration (R1, R1.1)', () => {
+  it('the platform admin sees users, audit, shared configuration and review rules (R1–R3)', () => {
     expect(hrefs('platform_admin')).toEqual([
       '/admin',
       '/admin/users',
@@ -40,6 +40,7 @@ describe('role-driven navigation', () => {
       '/admin/standards',
       '/admin/flags',
       '/admin/workgroups',
+      '/admin/reviews',
     ]);
     const live = nav('platform_admin').flatMap((s) => s.items).filter((i) => !i.release);
     expect(live.map((i) => i.href)).toContain('/admin/library');
@@ -52,14 +53,16 @@ describe('role-driven navigation', () => {
     }
   });
 
-  it('a category manager sees only the workbench, without approvals', () => {
-    expect(hrefs('category_manager')).toEqual(['/workbench', '/workbench/taxonomy', '/workbench/versions']);
+  it('a category manager sees only the workbench, without the review desk', () => {
+    expect(hrefs('category_manager')).toEqual(['/workbench', '/workbench/taxonomy', '/workbench/versions', '/workbench/status']);
   });
 
-  it('approvals and escalations go to the approver', () => {
-    expect(hrefs('approver')).toContain('/workbench/approvals');
+  it('category approvals (R3, live) and escalations go to the approver', () => {
+    const approvals = nav('approver').flatMap((s) => s.items).find((i) => i.href === '/reviews');
+    expect(approvals).toMatchObject({ label: 'Category approvals' });
+    expect(approvals?.release).toBeUndefined();
     expect(hrefs('approver')).toContain('/reviews/escalations');
-    expect(hrefs('reviewer')).not.toContain('/workbench/approvals');
+    expect(hrefs('category_manager')).not.toContain('/reviews');
   });
 
   it('the reviewer sees every review queue', () => {

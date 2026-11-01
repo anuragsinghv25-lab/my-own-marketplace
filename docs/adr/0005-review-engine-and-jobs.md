@@ -1,6 +1,6 @@
 # 0005 · Own generic review engine on Postgres + pg-boss
 
-- **Status:** Accepted, amended by [0008](0008-vercel-and-supabase.md): the review engine stands; pg-boss is replaced by Vercel Workflows (timers, orchestration) and Vercel Cron
+- **Status:** Accepted, amended by [0008](0008-vercel-and-supabase.md) and [0011](0011-review-engine-and-daily-job.md): the review engine stands as `@orbita/reviews`; pg-boss is replaced by one daily Vercel Cron job
 - **Date:** 2026-10-27
 
 ## Context

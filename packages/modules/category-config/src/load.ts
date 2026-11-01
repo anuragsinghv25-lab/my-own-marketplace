@@ -46,6 +46,9 @@ export interface VersionRef {
   lockedBy: string | null;
   lockedAt: Date | null;
   editorIds: string[];
+  /** R3: who last sent it for approval */
+  submittedBy: string | null;
+  discardReason: string | null;
   node: { id: string; code: string; name: string; kind: string; path: string[] };
   workgroupId: string | null;
 }
@@ -76,13 +79,15 @@ export async function loadVersion(db: DbOrTx, id: string, forUpdate = false): Pr
     lockedBy: v.lockedBy,
     lockedAt: v.lockedAt,
     editorIds: v.editorIds,
+    submittedBy: v.submittedBy,
+    discardReason: v.discardReason,
     node: { id: self.id, code: self.code, name: self.name, kind: self.kind, path: chain.map((c) => c.name) },
     workgroupId: [...chain].reverse().find((c) => c.workgroup_id)?.workgroup_id ?? null,
   };
 }
 
-export const versionSubject = (v: Pick<VersionRef, 'workgroupId' | 'state' | 'editorIds'>) =>
-  subject('CategoryVersion', { workgroupId: v.workgroupId, state: v.state, editorIds: v.editorIds });
+export const versionSubject = (v: Pick<VersionRef, 'workgroupId' | 'state' | 'editorIds'> & { submittedBy?: string | null }) =>
+  subject('CategoryVersion', { workgroupId: v.workgroupId, state: v.state, editorIds: v.editorIds, submittedBy: v.submittedBy ?? null });
 
 export function assertRead(ability: AppAbility, v: VersionRef) {
   if (!ability.can('read', versionSubject(v))) throw forbidden('You cannot view this category version.');
@@ -333,6 +338,7 @@ export async function getWorkspace(db: DbOrTx, ctx: Pick<Ctx, 'actor' | 'ability
       assigneeId: v.assigneeId,
       assigneeName: nameOf(v.assigneeId),
       titleTemplate: v.titleTemplate,
+      discardReason: v.discardReason,
       lock: lockFresh ? { by: v.lockedBy!, byName: nameOf(v.lockedBy), at: v.lockedAt!, mine: v.lockedBy === ctx.actor.id } : null,
     },
     node: v.node,

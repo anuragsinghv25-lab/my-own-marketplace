@@ -3,3 +3,4 @@ export { compile, canonicalJson, fieldsFor, MAX_KEY_SPECS, MAX_VARIANT_OPTIONS, 
 export { evaluate, renderTitle, sanitize } from './evaluate';
 export { describeCondition, describeRule, formatValue, holds, opsFor, satisfiable } from './logic';
 export { buildOfferSchema, buildProductSchema } from './schema';
+export { compareContracts, type ChangeArea, type ChangeKind, type ContractChange } from './compare';

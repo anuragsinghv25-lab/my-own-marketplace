@@ -45,8 +45,8 @@ The detailed scope of every release is in **[docs/releases](../releases/README.m
 
 ## Immediate next steps
 
-R0 to R2 (with R0.1 and R1.1) are built. Next:
+R0 to R3 (with R0.1 and R1.1) are built: the category side is complete for v1. Next:
 
-1. Configure the pilot categories in the studio: adopt from Shopify, start specs from the attribute set, add rules and test cases, compile.
-2. Build **R3** (category approval and publishing): submit a compiled version, approver review with the contract diff, schedule and publish. Separation of duties uses the editor list R2 records.
-3. Before real data: separate preview and production databases.
+1. Configure and publish the pilot categories: adopt from Shopify, configure in the studio, submit, approve and schedule.
+2. Build **R4** (sellers and brands): seller organisations, vendor assessment and brand review, reusing the R3 review engine with new review definitions (brands get two stages) and adding file attachments.
+3. Keep previews on their own database (deploy guide step 8).

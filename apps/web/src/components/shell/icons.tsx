@@ -1,4 +1,5 @@
 import {
+  Activity,
   AlertTriangle,
   BadgeCheck,
   Building2,
@@ -38,4 +39,5 @@ export const NAV_ICONS: Record<IconName, LucideIcon> = {
   tag: Tag,
   alert: AlertTriangle,
   palette: Palette,
+  activity: Activity,
 };

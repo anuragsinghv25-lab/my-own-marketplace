@@ -47,14 +47,17 @@ At MVP every lane except **amber** can be switched off, so the platform starts a
 ```mermaid
 stateDiagram-v2
   [*] --> DRAFT: creator assigns workgroup + checker
+  IN_REVIEW --> DRAFT: withdrawn before the approver acts
+  IN_REVIEW --> DISCARDED: approver discards
+  SENT_BACK --> DISCARDED: category team discards
   DRAFT --> DRAFT: drafter / checker edit (edit lock)
   DRAFT --> IN_REVIEW: checker submits
   IN_REVIEW --> SENT_BACK: approver sends back
-  SENT_BACK --> DRAFT: checker resumes
+  SENT_BACK --> IN_REVIEW: checker fixes and resubmits (same approver)
   IN_REVIEW --> APPROVED: approver approves
   APPROVED --> SCHEDULED: go-live date in future
   APPROVED --> PUBLISHED: go-live now
-  SCHEDULED --> PUBLISHED: timer fires
+  SCHEDULED --> PUBLISHED: seller go-live date (daily job, or the next page load)
   PUBLISHED --> SUPERSEDED: next version published
   DRAFT --> DISCARDED: checker discards
   PUBLISHED --> [*]

@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, ChevronRight, Copy, Hammer, Lock, UserRound, XCircle } from 'lucide-react';
-import { Badge, Button, Checkbox, Dialog, Field, Select } from '@orbita/ui';
+import { CheckCircle2, ChevronRight, Copy, CornerUpLeft, Hammer, Lock, Send, UserRound, XCircle } from 'lucide-react';
+import { Badge, Button, buttonClass, Checkbox, Dialog, Field, Select } from '@orbita/ui';
 import { assignVersionAction, cloneFromAction, compileAction } from '@/app/(app)/workbench/versions/actions';
 import { useRunner } from '@/components/common/use-runner';
 import { timeAgo } from '@/lib/format';
@@ -26,6 +26,7 @@ export function VersionHeader({
   errorCount,
   assignees,
   others,
+  approval,
 }: {
   ws: HeaderData;
   editable: boolean;
@@ -35,6 +36,7 @@ export function VersionHeader({
   errorCount: number;
   assignees: { id: string; name: string; email: string }[];
   others: { id: string; label: string }[];
+  approval: { ready: boolean; sentBack: boolean; openComments: number; href: string };
 }) {
   const { pending, run } = useRunner();
   const v = ws.version;
@@ -75,8 +77,22 @@ export function VersionHeader({
               <Hammer size={15} /> Compile{errorCount ? ` (${errorCount} to fix)` : ''}
             </Button>
           ) : null}
+          {approval.ready ? (
+            <Link href={approval.href} className={buttonClass('primary')}>
+              <Send size={15} /> {approval.sentBack ? 'Submit again' : 'Submit for approval'}
+            </Link>
+          ) : null}
         </div>
       </div>
+      {approval.sentBack ? (
+        <div className="mt-3 flex items-center gap-2 rounded-xl bg-warn/10 px-4 py-2.5 text-sm">
+          <CornerUpLeft size={15} className="text-warn" />
+          <span>
+            The approver sent this version back{approval.openComments ? ` with ${approval.openComments} open comment${approval.openComments === 1 ? '' : 's'}` : ''}.{' '}
+            <Link href={approval.href} className="text-accent hover:underline">See the feedback</Link>
+          </span>
+        </div>
+      ) : null}
       {lockedOut ? (
         <div className="mt-3 flex items-center gap-2 rounded-xl bg-warn/10 px-4 py-2.5 text-sm">
           <Lock size={15} className="text-warn" />

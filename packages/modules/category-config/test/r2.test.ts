@@ -207,8 +207,8 @@ describe.skipIf(!testDatabaseUrl)('R2 · category configuration studio (Postgres
     expect(ws.canEdit).toBe(false);
     const [row] = await t.db.execute<{ editor_ids: string[] }>(sql`select editor_ids from category_versions where id = ${versionId}`);
     expect(row!.editor_ids).toEqual(expect.arrayContaining([users.cm, users.cm2]));
-    await t.db.execute(sql`update category_versions set state = 'PUBLISHED' where id = ${otherVersionId}`);
-    await expect(setTitleTemplate(deps(), cm, otherVersionId, '{brand}')).rejects.toThrow(/published and can no longer be edited/);
+    await t.db.execute(sql`update category_versions set state = 'IN_REVIEW' where id = ${otherVersionId}`);
+    await expect(setTitleTemplate(deps(), cm, otherVersionId, '{brand}')).rejects.toThrow(/in review and can no longer be edited\. Withdraw it from review first/);
     await t.db.execute(sql`update category_versions set state = 'DRAFT' where id = ${otherVersionId}`);
   });
 

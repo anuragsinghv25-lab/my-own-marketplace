@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Command } from 'cmdk';
-import { Bell, LogOut, Menu as MenuIcon, Moon, Palette, Search, Sun, X } from 'lucide-react';
+import { LogOut, Menu as MenuIcon, Moon, Palette, Search, Sun, X } from 'lucide-react';
 import * as React from 'react';
 import {
   Avatar,
@@ -19,6 +19,7 @@ import {
 } from '@orbita/ui';
 import type { NavSection } from '@/lib/navigation';
 import { NAV_ICONS } from './icons';
+import { NotificationsMenu, type NotificationData } from './notifications-menu';
 
 export interface ShellUser {
   name: string;
@@ -31,12 +32,14 @@ export function AppShell({
   user,
   sections,
   children,
+  notifications,
   preview = false,
 }: {
   marketplace: string;
   user: ShellUser;
   sections: NavSection[];
   children: React.ReactNode;
+  notifications?: NotificationData;
   /** Design-gallery preview: no navigation side effects. */
   preview?: boolean;
 }) {
@@ -148,26 +151,7 @@ export function AppShell({
             <Search size={18} />
           </button>
           <ThemeToggle />
-          <Menu>
-            <MenuTrigger asChild>
-              <button
-                type="button"
-                className="shrink-0 h-9 w-9 rounded-full grid place-items-center text-mute hover:bg-soft"
-                aria-label="Notifications"
-              >
-                <Bell size={18} />
-              </button>
-            </MenuTrigger>
-            <MenuContent>
-              <div className="w-72 px-3 py-6 text-center">
-                <div className="mx-auto mb-3 h-11 w-11 rounded-2xl bg-accent/10 text-accent grid place-items-center">
-                  <Bell size={18} />
-                </div>
-                <div className="text-sm font-semibold">You&apos;re all caught up</div>
-                <p className="text-xs text-mute mt-1">Review assignments and approvals will appear here.</p>
-              </div>
-            </MenuContent>
-          </Menu>
+          <NotificationsMenu data={notifications} />
           <Menu>
             <MenuTrigger asChild>
               <button type="button" className="ml-1 rounded-full" aria-label="Account menu">

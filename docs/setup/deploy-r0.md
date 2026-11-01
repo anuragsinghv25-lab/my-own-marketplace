@@ -186,6 +186,7 @@ Check: the production build log keeps showing `[migrate] Up to date`. If a produ
 | R1.1 | The migration renames custom category codes (`10101510-01` → `C10.10.15.10.01`) and turns old L5 nodes into listing categories; nothing to do. Then Admin → **Standard taxonomies** → *Load Shopify 2026-10* (a few seconds). Optional: download the UNSPSC codeset (Excel) and upload it on the same page |
 | R2 | Nothing to do: the migration adds the configuration tables. Category managers open **Category versions** (or *Configure* on a listing category in the tree) |
 | Preview split | Step 8 above, once. Production needs nothing: its next build stamps the database |
+| R3 | Add `CRON_SECRET` (any long random string) in Vercel → Environment Variables for **Production**, then redeploy. Vercel calls the daily job at 00:15 IST with it (Settings → **Cron Jobs** lists it). Without it the job refuses to run, and go-lives still happen when anyone opens the review desk or category status. Approvers find their work under **Review desk → Category approvals**; review rules are under Admin → **Review rules** |
 
 ## Troubleshooting
 
