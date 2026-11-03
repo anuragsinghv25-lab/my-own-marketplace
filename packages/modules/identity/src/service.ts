@@ -10,7 +10,7 @@ import {
   type RoleKey,
 } from '@orbita/authz';
 import { likeEscape, recordAudit } from '@orbita/audit';
-import { profiles, roleGrants, type Database, type DbOrTx, type Profile } from '@orbita/db';
+import { organisations, orgAddresses, profiles, roleGrants, type Database, type DbOrTx, type Profile } from '@orbita/db';
 import {
   badRequest,
   conflict,
@@ -490,7 +490,7 @@ export async function needsBootstrap(db: DbOrTx): Promise<boolean> {
   return (await activePlatformAdminIds(db)).length === 0;
 }
 
-/** Demo seller organisation ids, used as the scope of seller roles until R4 adds real organisations. */
+/** Demo seller organisation ids (real, verified organisations since R4: see ensureDemoOrgs). */
 export const DEMO_ORG_ID = '00000000-0000-4000-8000-0000000000d1';
 export const DEMO_OEM_ORG_ID = '00000000-0000-4000-8000-0000000000d2';
 
@@ -541,7 +541,7 @@ export const DEMO_TEAM: readonly DemoAccount[] = [
     name: 'Demo OEM Seller',
     kind: 'seller',
     grant: { role: 'seller_admin', scopeType: 'org', scopeId: DEMO_OEM_ORG_ID },
-    purpose: 'Owns a brand: lists its own catalogs and approves resellers (brand ownership arrives in R4)',
+    purpose: 'A manufacturer: owns brands after vendor assessment, then authorises resellers',
   },
 ];
 
@@ -600,11 +600,43 @@ async function createActiveUser(
   return userId;
 }
 
+/** The two demo seller organisations, already verified (R4), so the seller app works straight after setup. */
+export const DEMO_ORGS = [
+  { id: DEMO_ORG_ID, legalName: 'Demo Retail Private Limited', tradeName: 'Demo Retail', gstin: '27AABCD1234E1Z8', stateCode: '27', city: 'Mumbai', pincode: '400001' },
+  { id: DEMO_OEM_ORG_ID, legalName: 'Demo Devices Private Limited', tradeName: 'Demo Devices', gstin: '29AABCN5678F1Z4', stateCode: '29', city: 'Bengaluru', pincode: '560001' },
+] as const;
+
+export async function ensureDemoOrgs(db: DbOrTx, emailDomain = 'example.com') {
+  for (const o of DEMO_ORGS) {
+    const [row] = await db
+      .insert(organisations)
+      .values({
+        id: o.id,
+        legalName: o.legalName,
+        tradeName: o.tradeName,
+        businessType: 'private_limited',
+        gstin: o.gstin,
+        pan: o.gstin.slice(2, 12),
+        stateCode: o.stateCode,
+        contactName: o.tradeName,
+        contactEmail: `${o.id === DEMO_ORG_ID ? 'seller' : 'oem-seller'}@${emailDomain}`,
+        contactPhone: '+919800000000',
+        status: 'verified',
+        verifiedAt: new Date(),
+        termsAcceptedAt: new Date(),
+      })
+      .onConflictDoNothing()
+      .returning();
+    if (row) await db.insert(orgAddresses).values({ orgId: o.id, kind: 'registered', label: 'Registered office', line1: '1 Demo Road', city: o.city, stateCode: o.stateCode, pincode: o.pincode });
+  }
+}
+
 async function createDemoTeam(
   deps: Pick<IdentityDeps, 'db' | 'auth'>,
   who: { actor: Actor | null; meta: RequestMeta },
   input: z.output<typeof demoTeamInputSchema>,
 ) {
+  await ensureDemoOrgs(deps.db, input.emailDomain);
   const created: { id: string; email: string; role: RoleKey; purpose: string }[] = [];
   try {
     for (const d of DEMO_TEAM) {

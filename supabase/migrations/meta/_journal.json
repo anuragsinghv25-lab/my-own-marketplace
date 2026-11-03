@@ -85,6 +85,20 @@
       "when": 1793536296868,
       "tag": "20261101123136_review_and_publishing_security",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793690971710,
+      "tag": "20261103072931_sellers_and_brands",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793690973964,
+      "tag": "20261103072933_sellers_and_brands_security",
+      "breakpoints": true
     }
   ]
 }

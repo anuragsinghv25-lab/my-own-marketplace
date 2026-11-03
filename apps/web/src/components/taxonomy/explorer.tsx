@@ -32,6 +32,7 @@ import {
   renameNodeAction,
   setNodeKindAction,
   setNodeStatusAction,
+  setTrademarkClassesAction,
   setUnspscCodeAction,
 } from '@/app/(app)/workbench/taxonomy/actions';
 import { splitList, useRunner } from '@/components/common/use-runner';
@@ -53,6 +54,7 @@ export interface ExplorerNode {
   source: CategorySource;
   externalId: string | null;
   unspscCode: string | null;
+  trademarkClasses: number[];
   attributeCount: number;
   workgroupId: string | null;
   effectiveWorkgroupId: string | null;
@@ -337,7 +339,7 @@ function NodeDetail({
         </div>
         {node.description ? <p className="mt-3 text-sm text-mute">{node.description}</p> : null}
 
-        <div className="mt-4 grid sm:grid-cols-3 gap-3">
+        <div className="mt-4 grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
           <div className="rounded-xl bg-soft p-3.5">
             <div className="flex items-center gap-1.5 text-xs text-mute"><Users size={13} /> Workgroup</div>
             <div className="mt-1 text-sm font-medium">{owner ?? 'None yet'}</div>
@@ -346,6 +348,7 @@ function NodeDetail({
             </div>
           </div>
           <UnspscBox node={node} inheritedFrom={unspscFrom ?? null} />
+          <ClassesBox node={node} inheritedFrom={path.slice(0, -1).reverse().find((p) => p.trademarkClasses.length) ?? null} />
           <div className="rounded-xl bg-soft p-3.5">
             <div className="text-xs text-mute">Aliases{node.kind === 'listing' ? ' (at least one)' : ''}</div>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -454,6 +457,40 @@ function UnspscBox({ node, inheritedFrom }: { node: ExplorerNode; inheritedFrom:
             {node.canEdit && node.source !== 'unspsc' ? (
               <button type="button" className="text-accent hover:underline" onClick={() => setEditing(true)}>{node.unspscCode ? 'Change' : 'Map'}</button>
             ) : null}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** R4: trademark (Nice) classes that fit this category: brand requests suggest it, and same-class approvals are automatic. */
+function ClassesBox({ node, inheritedFrom }: { node: ExplorerNode; inheritedFrom: ExplorerNode | null }) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(node.trademarkClasses.join(', '));
+  const { pending, run } = useRunner();
+  const shown = node.trademarkClasses.length ? node.trademarkClasses : (inheritedFrom?.trademarkClasses ?? []);
+  return (
+    <div className="rounded-xl bg-soft p-3.5">
+      <div className="flex items-center gap-1.5 text-xs text-mute"><Hash size={13} /> Trademark classes</div>
+      {editing ? (
+        <form
+          className="mt-1.5 flex gap-1.5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const classes = text.split(/[^0-9]+/).filter(Boolean).map(Number);
+            run(() => setTrademarkClassesAction(node.id, classes), () => setEditing(false));
+          }}
+        >
+          <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="9, 11" className="h-8 text-sm" aria-label="Trademark classes" autoFocus />
+          <Button type="submit" size="sm" loading={pending}>Save</Button>
+        </form>
+      ) : (
+        <>
+          <div className="mt-1 text-sm font-medium">{shown.length ? shown.map((c) => `Class ${c}`).join(', ') : 'None'}</div>
+          <div className="text-xs text-mute mt-0.5 flex items-center gap-2">
+            {node.trademarkClasses.length ? 'Set here' : inheritedFrom ? `Inherited from ${inheritedFrom.name}` : 'For brand requests'}
+            {node.canEdit ? <button type="button" className="text-accent hover:underline" onClick={() => setEditing(true)}>{node.trademarkClasses.length ? 'Change' : 'Set'}</button> : null}
           </div>
         </>
       )}

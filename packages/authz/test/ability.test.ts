@@ -251,3 +251,39 @@ describe('R3 · approval and publishing', () => {
     expect(ap.can('operate', subject('CategoryNode', { workgroupId: WG_A }))).toBe(true);
   });
 });
+
+describe('R4 · sellers and brands', () => {
+  const sa = abilityOf(g('seller_admin', 'org', WG_A));
+  const ss = abilityOf(g('seller_staff', 'org', WG_A));
+  const rv = abilityOf(g('reviewer'));
+  const ap = abilityOf(g('approver'));
+  const admin = abilityOf(g('platform_admin'));
+  const bo = abilityOf(g('brand_owner', 'brand', WG_B));
+
+  it('seller admins manage their own organisation; staff list but do not manage', () => {
+    expect(sa.can('assign', subject('SellerOrg', { orgId: WG_A }))).toBe(true);
+    expect(sa.can('assign', subject('SellerOrg', { orgId: WG_B }))).toBe(false);
+    expect(sa.can('submit', subject('VendorAssessment', { orgId: WG_A }))).toBe(true);
+    expect(ss.can('assign', subject('SellerOrg', { orgId: WG_A }))).toBe(false);
+    expect(ss.can('submit', subject('VendorAssessment', { orgId: WG_A }))).toBe(false);
+    expect(ss.can('create', subject('Certificate', { orgId: WG_A }))).toBe(true);
+  });
+
+  it('reviewers verify organisations and certificates and escalate; approvers decide escalations and revive brands', () => {
+    expect(rv.can('approve', subject('SellerOrg', { orgId: WG_A }))).toBe(true);
+    expect(rv.can('approve', subject('Certificate', { orgId: WG_A }))).toBe(true);
+    expect(rv.can('create', 'Escalation')).toBe(true);
+    expect(rv.can('approve', 'BrandBlock')).toBe(false);
+    expect(ap.can('approve', 'Escalation')).toBe(true);
+    expect(ap.can('approve', 'BrandBlock')).toBe(true);
+  });
+
+  it('brand owners decide resellers of their own brands only; platform admins keep the name lists', () => {
+    expect(bo.can('approve', subject('Brand', { brandId: WG_B }))).toBe(true);
+    expect(bo.can('approve', subject('Brand', { brandId: WG_A }))).toBe(false);
+    expect(sa.can('approve', subject('Brand', { brandId: WG_B }))).toBe(false);
+    expect(admin.can('create', 'ProhibitedName')).toBe(true);
+    expect(admin.can('approve', subject('SellerOrg', { orgId: WG_A }))).toBe(false);
+    expect(rv.can('create', 'ProhibitedName')).toBe(false);
+  });
+});

@@ -49,6 +49,11 @@ export type SubjectType =
   | 'CategoryVersion'
   | 'ReviewRequest'
   | 'ReviewDefinition'
+  // R4
+  | 'Certificate'
+  | 'Brand'
+  | 'BrandBlock'
+  | 'ProhibitedName'
   | 'VendorAssessment'
   | 'BrandRequest'
   | 'Catalog'
@@ -129,6 +134,10 @@ export function defineAbilityFor({ userId, grants }: AbilityInput): AppAbility {
         // R3: runs the review machinery (rules, transfers) but never decides
         can(['read', 'update'], 'ReviewDefinition');
         can(['read', 'assign'], 'ReviewRequest');
+        // R4: sees organisations and brands, keeps the prohibited-name lists, suspends organisations
+        can(['read', 'deactivate'], 'SellerOrg');
+        can('read', ['Brand', 'BrandBlock']);
+        can(['read', 'create', 'update'], 'ProhibitedName');
         break;
 
       case 'category_manager':
@@ -151,12 +160,18 @@ export function defineAbilityFor({ userId, grants }: AbilityInput): AppAbility {
         allow(['read', 'assign', 'comment'], 'ReviewRequest');
         can(['read', 'approve', 'assign'], ['VendorAssessment', 'BrandRequest', 'Catalog', 'Escalation']);
         can('read', 'Offer');
+        // R4: decides escalated seller, vendor and brand cases; revives blocked brands
+        can(['read', 'approve'], ['SellerOrg', 'BrandBlock']);
+        can('read', ['Certificate', 'Brand', 'ProhibitedName']);
         break;
 
       case 'reviewer':
         can('access', 'ReviewDesk');
         can(['read', 'approve'], ['VendorAssessment', 'BrandRequest', 'Catalog']);
         can(['read', 'create'], 'Escalation'); // escalate to an approver
+        // R4: verifies organisations and certificates
+        can(['read', 'approve'], ['SellerOrg', 'Certificate']);
+        can('read', ['Brand', 'BrandBlock', 'ProhibitedName']);
         can('read', ['Offer', 'CategoryNode', 'CategoryVersion']);
         can(['read', 'comment'], 'ReviewRequest');
         break;
@@ -168,21 +183,22 @@ export function defineAbilityFor({ userId, grants }: AbilityInput): AppAbility {
 
       case 'seller_admin':
         can('access', 'SellerApp');
-        allow(['read', 'update'], 'SellerOrg');
-        allow(['read', 'create', 'update', 'submit'], ['BrandRequest', 'Catalog', 'Offer']);
-        can('read', ['CategoryNode', 'CategoryVersion']);
+        allow(['read', 'update', 'assign'], 'SellerOrg'); // assign = users and divisions
+        allow(['read', 'create', 'update', 'submit'], ['BrandRequest', 'Catalog', 'Offer', 'VendorAssessment', 'Certificate']);
+        can('read', ['CategoryNode', 'CategoryVersion', 'Brand']);
         break;
 
       case 'seller_staff':
         can('access', 'SellerApp');
-        allow('read', 'SellerOrg');
-        allow(['read', 'create', 'update', 'submit'], ['BrandRequest', 'Catalog', 'Offer']);
-        can('read', ['CategoryNode', 'CategoryVersion']);
+        allow('read', ['SellerOrg', 'VendorAssessment']);
+        allow(['read', 'create', 'update', 'submit'], ['BrandRequest', 'Catalog', 'Offer', 'Certificate']);
+        can('read', ['CategoryNode', 'CategoryVersion', 'Brand']);
         break;
 
       case 'brand_owner':
         can('access', 'SellerApp');
         allow(['read', 'update', 'approve'], 'Catalog');
+        allow(['read', 'approve'], 'Brand'); // grant or decline resellers
         break;
     }
   }

@@ -25,6 +25,8 @@ export const env = {
   demoMode: () => first('NEXT_PUBLIC_DEMO_MODE') === 'true',
   marketplaceName: () => first('NEXT_PUBLIC_MARKETPLACE_NAME') ?? 'Orbita',
   /** Public base URL used in emails. Falls back to the Vercel URL, then localhost. */
+  /** 'database' keeps uploaded files in Postgres (local development); default is Supabase Storage */
+  fileStorage: () => (first('FILE_STORAGE') === 'database' ? 'database' : 'supabase'),
   /** Vercel Cron sends it as a bearer token; the daily job refuses calls without it */
   cronSecret: () => first('CRON_SECRET'),
   appUrl: () => {

@@ -1,5 +1,6 @@
 'use server';
 
+import { setTrademarkClasses } from '@orbita/brands';
 import { getDb } from '@orbita/db';
 import { listAttributes } from '@orbita/library';
 import { browseStandard, getStandardCategory, searchStandard, standardsStatus, type ReferenceSource } from '@orbita/standards';
@@ -90,6 +91,13 @@ export async function setUnspscCodeAction(id: string, code: string | null): Prom
   return runAction(async () => {
     await setUnspscCode(deps(), await actionCtx(), id, code);
     return { status: 'ok', message: code ? `Mapped to UNSPSC ${code}.` : 'UNSPSC mapping removed.' };
+  }, PATH);
+}
+
+export async function setTrademarkClassesAction(id: string, classes: number[]): Promise<ActionState> {
+  return runAction(async () => {
+    await setTrademarkClasses(deps(), await actionCtx(), id, classes);
+    return { status: 'ok', message: classes.length ? `Trademark classes set: ${classes.join(', ')}.` : 'Trademark classes removed: inherited again.' };
   }, PATH);
 }
 

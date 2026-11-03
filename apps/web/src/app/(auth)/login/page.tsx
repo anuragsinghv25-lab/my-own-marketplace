@@ -30,6 +30,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         {sp.signedout ? <Notice tone="accent">You have signed out.</Notice> : null}
         <LoginForm next={safeNext(sp.next)} emailEnabled={configStatus().email} />
       </div>
+      <p className="mt-5 text-sm text-mute text-center">
+        Selling on {env.marketplaceName()}? <Link href="/register" className="text-accent hover:underline">Register your business</Link>
+      </p>
       {env.demoMode() ? (
         <p className="mt-6 rounded-xl bg-soft p-3.5 text-xs text-mute">
           Demo accounts: <code className="text-ink">category-manager@</code>, <code className="text-ink">approver@</code>,{' '}

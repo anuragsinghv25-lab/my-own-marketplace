@@ -45,8 +45,8 @@ The detailed scope of every release is in **[docs/releases](../releases/README.m
 
 ## Immediate next steps
 
-R0 to R3 (with R0.1 and R1.1) are built: the category side is complete for v1. Next:
+R0 to R4 (with R0.1 and R1.1) are built: categories, sellers and brands. Next:
 
-1. Configure and publish the pilot categories: adopt from Shopify, configure in the studio, submit, approve and schedule.
-2. Build **R4** (sellers and brands): seller organisations, vendor assessment and brand review, reusing the R3 review engine with new review definitions (brands get two stages) and adding file attachments.
+1. Pilot setup: publish the pilot categories, set trademark classes on the tree, onboard 10–20 sellers through `/register`.
+2. Build **R5** (catalog creation and approval): sellers list products against published contracts, only for approved brand-category pairs; catalog review reuses the R4 case path.
 3. Keep previews on their own database (deploy guide step 8).

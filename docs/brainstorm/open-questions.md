@@ -22,6 +22,9 @@ Decisions we need before or during R0–R2. Each has a default we will use if no
 
 | Q15 | Services categories (manpower, maintenance, cab hiring) | In scope · Later · Never | **Decided (2026-10-30): out of scope.** Orbita lists physical products |
 | Q16 | Pilot operator | Government portal · General marketplace | **Decided (2026-10-30): a general marketplace**, no government pilot. Procurement-style rules (MSE preference, land-border) remain configurable flags |
+| Q17 | How sellers join | Self sign-up · Invite only · Both | **Decided (2026-11-03): self sign-up with email verification**, on the free Supabase plan: the server creates the account through the admin API, so public sign-up stays off. Organisations stay *pending* until a reviewer verifies them |
+| Q18 | Brand review depth | GeM chain (specialist → agency manager → marketplace manager → committee, helpdesk revival, priority + bid) · Lean | **Decided (2026-11-03): lean two-step.** A reviewer decides, asks for information or escalates; an approver decides escalations, blocks brands for everyone and revives them. No committee, helpdesk tickets or bid ordering |
+| Q19 | Seller identity | India only · India-first · Country-neutral | **Decided (2026-11-03): India only for now** (GSTIN with check digit, PAN taken from it, GST state codes, Indian PIN codes and mobiles). A country column is kept so other countries can be added later |
 
 ## Brainstorm parking lot
 

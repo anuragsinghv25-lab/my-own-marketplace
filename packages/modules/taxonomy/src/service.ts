@@ -54,6 +54,8 @@ export interface TreeNode {
   source: 'custom' | 'shopify' | 'unspsc';
   externalId: string | null;
   unspscCode: string | null;
+  /** R4: trademark (Nice) classes set on this node; children inherit them */
+  trademarkClasses: number[];
   /** attributes set on this node itself (children inherit them) */
   attributeCount: number;
   workgroupId: string | null;
@@ -102,6 +104,7 @@ export async function loadTree(db: DbOrTx, ability: AppAbility) {
       source: n.source,
       externalId: n.externalId,
       unspscCode: n.unspscCode,
+      trademarkClasses: n.trademarkClasses,
       attributeCount: countOf.get(n.id) ?? 0,
       workgroupId: n.workgroupId,
       effectiveWorkgroupId: effective(n),

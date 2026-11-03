@@ -30,7 +30,7 @@ describe('role-driven navigation', () => {
     }
   });
 
-  it('the platform admin sees users, audit, shared configuration and review rules (R1–R3)', () => {
+  it('the platform admin sees users, audit, shared configuration, review rules and brand names (R1–R4)', () => {
     expect(hrefs('platform_admin')).toEqual([
       '/admin',
       '/admin/users',
@@ -41,6 +41,7 @@ describe('role-driven navigation', () => {
       '/admin/flags',
       '/admin/workgroups',
       '/admin/reviews',
+      '/admin/brand-names',
     ]);
     const live = nav('platform_admin').flatMap((s) => s.items).filter((i) => !i.release);
     expect(live.map((i) => i.href)).toContain('/admin/library');
@@ -65,8 +66,10 @@ describe('role-driven navigation', () => {
     expect(hrefs('category_manager')).not.toContain('/reviews');
   });
 
-  it('the reviewer sees every review queue', () => {
-    expect(hrefs('reviewer')).toEqual(['/reviews', '/reviews/vendors', '/reviews/brands', '/reviews/catalogs', '/reviews/escalations']);
+  it('the reviewer sees every first-line queue; escalations go to approvers', () => {
+    expect(hrefs('reviewer')).toEqual(['/reviews', '/reviews/sellers', '/reviews/vendors', '/reviews/brands', '/reviews/certificates', '/reviews/catalogs']);
+    expect(hrefs('approver')).toEqual(expect.arrayContaining(['/reviews/sellers', '/reviews/vendors', '/reviews/brands', '/reviews/escalations']));
+    expect(hrefs('approver')).not.toContain('/reviews/certificates');
   });
 
   it('the audit log is for platform admins and auditors', () => {
@@ -74,7 +77,10 @@ describe('role-driven navigation', () => {
     expect(withAudit.sort()).toEqual(['auditor', 'platform_admin']);
   });
 
-  it('a seller admin sees the whole seller app', () => {
-    expect(hrefs('seller_admin')).toEqual(['/seller', '/seller/organisation', '/seller/brands', '/seller/catalogs', '/seller/offers']);
+  it('a seller admin sees the seller app; the OEM dashboard needs brand ownership', () => {
+    expect(hrefs('seller_admin')).toEqual(['/seller', '/seller/organisation', '/seller/vendor-assessment', '/seller/brands', '/seller/certificates', '/seller/catalogs', '/seller/offers']);
+    const live = nav('seller_admin').flatMap((s) => s.items).filter((i) => !i.release).map((i) => i.href);
+    expect(live).toEqual(['/seller', '/seller/organisation', '/seller/vendor-assessment', '/seller/brands', '/seller/certificates']);
+    expect(hrefs('brand_owner')).toContain('/seller/oem');
   });
 });

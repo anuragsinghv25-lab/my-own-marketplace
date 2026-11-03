@@ -23,7 +23,9 @@ export type IconName =
   | 'tag'
   | 'alert'
   | 'palette'
-  | 'activity';
+  | 'activity'
+  | 'factory'
+  | 'certificate';
 
 export interface NavItem {
   href: string;
@@ -50,6 +52,7 @@ const NAV: Record<Area, NavItem[]> = {
     { href: '/admin/flags', label: 'Flags & profiles', icon: 'flag', requires: ['read', 'FlagProfile'] },
     { href: '/admin/workgroups', label: 'Workgroups', icon: 'network', requires: ['read', 'Workgroup'] },
     { href: '/admin/reviews', label: 'Review rules', icon: 'stamp', requires: ['update', 'ReviewDefinition'] },
+    { href: '/admin/brand-names', label: 'Brand names', icon: 'badge', requires: ['create', 'ProhibitedName'] },
   ],
   Workbench: [
     { href: '/workbench', label: 'Home', icon: 'home', requires: ['access', 'Workbench'] },
@@ -59,15 +62,20 @@ const NAV: Record<Area, NavItem[]> = {
   ],
   ReviewDesk: [
     { href: '/reviews', label: 'Category approvals', icon: 'stamp', requires: ['read', 'ReviewRequest'] },
-    { href: '/reviews/vendors', label: 'Vendor assessments', icon: 'building', requires: ['read', 'VendorAssessment'], release: 'R4' },
-    { href: '/reviews/brands', label: 'Brand requests', icon: 'badge', requires: ['read', 'BrandRequest'], release: 'R4' },
+    { href: '/reviews/sellers', label: 'Seller verification', icon: 'building', requires: ['approve', 'SellerOrg'] },
+    { href: '/reviews/vendors', label: 'Vendor assessments', icon: 'factory', requires: ['approve', 'VendorAssessment'] },
+    { href: '/reviews/brands', label: 'Brand requests', icon: 'badge', requires: ['approve', 'BrandRequest'] },
+    { href: '/reviews/certificates', label: 'Certificates', icon: 'certificate', requires: ['approve', 'Certificate'] },
     { href: '/reviews/catalogs', label: 'Catalog reviews', icon: 'package', requires: ['approve', 'Catalog'], release: 'R5' },
-    { href: '/reviews/escalations', label: 'Escalations', icon: 'alert', requires: ['read', 'Escalation'], release: 'R4' },
+    { href: '/reviews/escalations', label: 'Escalations', icon: 'alert', requires: ['approve', 'Escalation'] },
   ],
   SellerApp: [
     { href: '/seller', label: 'Home', icon: 'home', requires: ['access', 'SellerApp'] },
-    { href: '/seller/organisation', label: 'Organisation', icon: 'building', requires: ['read', 'SellerOrg'], release: 'R4' },
-    { href: '/seller/brands', label: 'Brands', icon: 'badge', requires: ['read', 'BrandRequest'], release: 'R4' },
+    { href: '/seller/organisation', label: 'Organisation', icon: 'building', requires: ['read', 'SellerOrg'] },
+    { href: '/seller/vendor-assessment', label: 'Vendor assessment', icon: 'factory', requires: ['read', 'VendorAssessment'] },
+    { href: '/seller/brands', label: 'Brands', icon: 'badge', requires: ['read', 'BrandRequest'] },
+    { href: '/seller/oem', label: 'Your brands (OEM)', icon: 'shield', requires: ['approve', 'Brand'] },
+    { href: '/seller/certificates', label: 'Certificates', icon: 'certificate', requires: ['read', 'Certificate'] },
     { href: '/seller/catalogs', label: 'Catalogs', icon: 'package', requires: ['read', 'Catalog'], release: 'R5' },
     { href: '/seller/offers', label: 'Offers', icon: 'tag', requires: ['read', 'Offer'], release: 'R5' },
   ],

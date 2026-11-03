@@ -1,0 +1,34 @@
+{
+  "name": "@orbita/brands",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./readiness": "./src/readiness.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@orbita/audit": "workspace:*",
+    "@orbita/authz": "workspace:*",
+    "@orbita/db": "workspace:*",
+    "@orbita/domain": "workspace:*",
+    "@orbita/identity": "workspace:*",
+    "@orbita/notifications": "workspace:*",
+    "@orbita/reviews": "workspace:*",
+    "@orbita/sellers": "workspace:*",
+    "@orbita/taxonomy": "workspace:*",
+    "drizzle-orm": "^0.45.4",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@orbita/config": "workspace:*",
+    "@types/node": "^22.10.0",
+    "postgres": "^3.4.9",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.12"
+  }
+}
