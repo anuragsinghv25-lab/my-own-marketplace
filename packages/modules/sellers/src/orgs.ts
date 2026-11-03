@@ -1,4 +1,5 @@
-import { and, asc, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
+import { createHash, randomInt } from 'node:crypto';
+import { and, asc, eq, gt, inArray, isNull, lt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { recordAudit } from '@orbita/audit';
 import { ROLES } from '@orbita/authz';
@@ -11,12 +12,13 @@ import {
   profiles,
   roleGrants,
   signupAttempts,
+  signupCodes,
   type Database,
   type DbOrTx,
   type Organisation,
 } from '@orbita/db';
 import { badRequest, conflict, forbidden, notFound, preconditionFailed, type RequestMeta } from '@orbita/domain';
-import { confirmUrl, type AuthDirectory, type Mailer } from '@orbita/identity';
+import { confirmUrl, demoPasswordSchema, type AuthDirectory, type Mailer } from '@orbita/identity';
 import { activeRequestFor } from '@orbita/reviews';
 import { CASE_SPECS, decideCase, respondCase, submitCase, type CaseDecisionInput, type CaseStatus } from './cases';
 import type { Ctx } from './context';
@@ -24,12 +26,12 @@ import { orgSubject } from './files';
 import { GST_STATES, gstinProblem, normalizeGstin, normalizePhone, panOf, PINCODE_RE } from './india';
 
 export interface SignupMailer {
-  sendSignupVerification(e: { to: string; name: string; orgName: string; url: string }): Promise<{ delivered: boolean }>;
+  sendSignupCode(e: { to: string; name: string; orgName: string; code: string }): Promise<{ delivered: boolean }>;
 }
 
 export interface SellerDeps {
   db: Database;
-  auth: Pick<AuthDirectory, 'invite' | 'delete'>;
+  auth: Pick<AuthDirectory, 'invite' | 'delete' | 'createUnconfirmed' | 'confirmEmail'>;
   mailer: SignupMailer & Pick<Mailer, 'sendInvite'>;
   appUrl: string;
 }
@@ -63,19 +65,22 @@ export const signupInput = z.object({
   email: z.email('Enter a valid email address.').transform((e) => e.toLowerCase().trim()),
   phone,
   address: addressInput,
+  password: demoPasswordSchema,
   acceptTerms: z.literal(true, { message: 'Accept the seller terms to continue.' }),
   /** a field real people never see; bots fill it */
   website2: z.string().max(0, 'Something went wrong. Please try again.').optional(),
 });
 export type SignupInput = z.input<typeof signupInput>;
+// confirmation is checked in the form; the server needs one copy only
 
 const LIMITS = { perIpPerHour: 5, perEmailPerDay: 3 };
 
 /**
- * Self sign-up. Creates the organisation (pending), its seller admin (invited) and sends the email
- * verification link, which leads to setting a password. Verification by a reviewer starts once the
- * email is confirmed (`startOrgVerification`). Supabase's public sign-up stays off: the server creates
- * the account through the admin API, so nothing here needs a paid plan.
+ * Self sign-up. Creates the organisation (pending), its seller admin (with the password they chose,
+ * email not yet confirmed) and emails a 6-digit code. Entering the code (`verifySignupCode`) confirms the
+ * email, activates the account and starts verification by a reviewer. No links: nothing depends on the
+ * site address. Supabase's public sign-up stays off: the server creates the account through the admin
+ * API, so nothing here needs a paid plan. Unfinished sign-ups are removed after a week (`purgeUnverifiedSignups`).
  */
 export async function signUpSeller(deps: SellerDeps, meta: RequestMeta, raw: SignupInput) {
   const ip = meta.ip ?? null;
@@ -96,9 +101,10 @@ export async function signUpSeller(deps: SellerDeps, meta: RequestMeta, raw: Sig
   const [dupUser] = await deps.db.select({ id: profiles.id }).from(profiles).where(sql`lower(${profiles.email}) = ${input.email}`);
   if (dupOrg || dupUser) {
     await deps.db.insert(signupAttempts).values({ ip, email: input.email, ok: false });
+    if (dupUser && (await pendingCode(deps.db, input.email))) throw conflict('This email is waiting for its code. Enter the code we sent, or ask for a new one.');
     throw conflict(dupOrg ? 'This GSTIN is already registered. Ask that organisation’s admin to add you as a user.' : 'An account with this email already exists. Sign in instead.');
   }
-  const { userId, link } = await deps.auth.invite(input.email, input.contactName);
+  const { userId } = await deps.auth.createUnconfirmed(input.email, input.password, input.contactName);
   let org: Organisation;
   try {
     org = await deps.db.transaction(async (tx) => {
@@ -135,9 +141,97 @@ export async function signUpSeller(deps: SellerDeps, meta: RequestMeta, raw: Sig
     await deps.auth.delete(userId).catch(() => {});
     throw err;
   }
-  const url = confirmUrl(deps.appUrl, link, '/welcome');
-  const { delivered } = await deps.mailer.sendSignupVerification({ to: input.email, name: input.contactName, orgName: input.legalName, url });
-  return { orgId: org.id, email: input.email, delivered, manualLink: delivered ? null : url };
+  const code = await issueCode(deps.db, userId, input.email);
+  const { delivered } = await deps.mailer.sendSignupCode({ to: input.email, name: input.contactName, orgName: input.legalName, code });
+  return { orgId: org.id, email: input.email, delivered, code: delivered ? null : code };
+}
+
+const CODE = { ttlMs: 30 * 60_000, maxAttempts: 5, resendGapMs: 60_000, maxSends: 5, purgeAfterDays: 7 };
+const hashCode = (id: string, code: string) => createHash('sha256').update(`${id}:${code}`).digest('hex');
+
+async function issueCode(db: DbOrTx, userId: string, email: string, sends = 1) {
+  const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+  const [row] = await db
+    .insert(signupCodes)
+    .values({ userId, email, codeHash: 'pending', expiresAt: new Date(Date.now() + CODE.ttlMs), sends })
+    .onConflictDoUpdate({ target: signupCodes.userId, set: { codeHash: 'pending', expiresAt: new Date(Date.now() + CODE.ttlMs), attempts: 0, sends, lastSentAt: new Date() } })
+    .returning({ id: signupCodes.id });
+  await db.update(signupCodes).set({ codeHash: hashCode(row!.id, code) }).where(eq(signupCodes.id, row!.id));
+  return code;
+}
+
+async function pendingCode(db: DbOrTx, email: string) {
+  const [row] = await db.select().from(signupCodes).where(and(eq(signupCodes.email, email), isNull(signupCodes.consumedAt)));
+  return row ?? null;
+}
+
+const codeInput = z.object({
+  email: z.email('Enter a valid email address.').transform((e) => e.toLowerCase().trim()),
+  code: z.string().trim().regex(/^[0-9]{6}$/, 'The code has 6 digits.'),
+});
+
+/** The seller enters the emailed code: confirm the email, activate the account, start verification. */
+export async function verifySignupCode(deps: Pick<SellerDeps, 'db' | 'auth'>, meta: RequestMeta, raw: z.input<typeof codeInput>) {
+  const { email, code } = codeInput.parse(raw);
+  const row = await pendingCode(deps.db, email);
+  const wrong = 'That code is not right. Check the latest email from us, or ask for a new code.';
+  if (!row) throw badRequest(wrong);
+  if (row.attempts >= CODE.maxAttempts) throw preconditionFailed('Too many wrong codes. Ask for a new code.');
+  if (row.expiresAt < new Date()) throw preconditionFailed('This code has expired. Ask for a new code.');
+  if (hashCode(row.id, code) !== row.codeHash) {
+    await deps.db.update(signupCodes).set({ attempts: sql`${signupCodes.attempts} + 1` }).where(eq(signupCodes.id, row.id));
+    throw badRequest(wrong);
+  }
+  await deps.auth.confirmEmail(row.userId);
+  const profile = await deps.db.transaction(async (tx) => {
+    const [used] = await tx.update(signupCodes).set({ consumedAt: new Date() }).where(and(eq(signupCodes.id, row.id), isNull(signupCodes.consumedAt))).returning({ id: signupCodes.id });
+    if (!used) throw conflict('This code was already used. Sign in instead.');
+    const now = new Date();
+    const [p] = await tx.update(profiles).set({ status: 'active', activatedAt: now, updatedAt: now }).where(and(eq(profiles.id, row.userId), eq(profiles.status, 'invited'))).returning();
+    if (!p) throw notFound('Account');
+    await recordAudit(tx, { actor: { id: p.id, email: p.email }, meta }, { action: 'user.activated', subjectType: 'user', subjectId: p.id, summary: `${p.email} confirmed their email with a code`, before: { status: 'invited' }, after: { status: 'active' } });
+    return p;
+  });
+  await startOrgVerification(deps.db, { id: profile.id, email: profile.email, fullName: profile.fullName }, meta);
+  return { userId: profile.id, email: profile.email };
+}
+
+/** A new code, at most once a minute and five times in all. */
+export async function resendSignupCode(deps: Pick<SellerDeps, 'db' | 'mailer'>, raw: { email: string }) {
+  const email = codeInput.shape.email.parse(raw.email);
+  const row = await pendingCode(deps.db, email);
+  // same answer whether or not the email is registered
+  if (!row) return { email, delivered: true, code: null };
+  if (Date.now() - row.lastSentAt.getTime() < CODE.resendGapMs) throw preconditionFailed('Wait a minute before asking for another code.');
+  if (row.sends >= CODE.maxSends) throw preconditionFailed('That is a lot of codes. Contact support to finish registering.');
+  const [who] = await deps.db.select({ name: profiles.fullName, orgName: organisations.legalName }).from(profiles).innerJoin(organisations, eq(organisations.createdBy, profiles.id)).where(eq(profiles.id, row.userId));
+  const code = await issueCode(deps.db, row.userId, email, row.sends + 1);
+  const { delivered } = await deps.mailer.sendSignupCode({ to: email, name: who?.name ?? '', orgName: who?.orgName ?? '', code });
+  return { email, delivered, code: delivered ? null : code };
+}
+
+/** Removes sign-ups whose email was never confirmed (organisation, account and everything attached). Run daily. */
+export async function purgeUnverifiedSignups(deps: Pick<SellerDeps, 'db' | 'auth'>, olderThanDays = CODE.purgeAfterDays) {
+  const cutoff = new Date(Date.now() - olderThanDays * 86_400_000);
+  const stale = await deps.db.select({ userId: signupCodes.userId }).from(signupCodes).where(and(isNull(signupCodes.consumedAt), lt(signupCodes.createdAt, cutoff)));
+  let removed = 0;
+  for (const { userId } of stale) {
+    await deps.db.transaction(async (tx) => {
+      const [p] = await tx.select({ status: profiles.status }).from(profiles).where(eq(profiles.id, userId));
+      if (p && p.status !== 'invited') return;
+      const orgIds = (await tx.select({ id: organisations.id }).from(organisations).where(and(eq(organisations.createdBy, userId), eq(organisations.status, 'pending')))).map((o) => o.id);
+      await tx.delete(roleGrants).where(eq(roleGrants.userId, userId));
+      if (orgIds.length) {
+        await tx.delete(orgAddresses).where(inArray(orgAddresses.orgId, orgIds));
+        await tx.delete(organisations).where(inArray(organisations.id, orgIds));
+      }
+      await tx.delete(profiles).where(eq(profiles.id, userId));
+      await tx.delete(signupCodes).where(eq(signupCodes.userId, userId));
+    });
+    await deps.auth.delete(userId).catch(() => {});
+    removed++;
+  }
+  return removed;
 }
 
 /** After the seller admin confirms their email: open seller verification once. */

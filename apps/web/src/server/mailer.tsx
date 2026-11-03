@@ -2,7 +2,7 @@ import 'server-only';
 import type { ReactElement } from 'react';
 import { Resend } from 'resend';
 import type { InviteEmail as InvitePayload, Mailer } from '@orbita/identity';
-import { InviteEmail, NotificationEmail, ResetPasswordEmail, SignInLinkEmail, SignupVerificationEmail } from '@/emails/templates';
+import { InviteEmail, NotificationEmail, ResetPasswordEmail, SignInLinkEmail, SignupCodeEmail } from '@/emails/templates';
 import { env } from './env';
 import { log } from './log';
 
@@ -28,7 +28,7 @@ export const mailer: Mailer & {
   sendSignInLink(to: string, url: string): Promise<{ delivered: boolean }>;
   sendPasswordReset(to: string, url: string): Promise<{ delivered: boolean }>;
   sendNotification(to: string, n: { title: string; body: string; url: string | null }): Promise<{ delivered: boolean }>;
-  sendSignupVerification(e: { to: string; name: string; orgName: string; url: string }): Promise<{ delivered: boolean }>;
+  sendSignupCode(e: { to: string; name: string; orgName: string; code: string }): Promise<{ delivered: boolean }>;
 } = {
   sendInvite: (e: InvitePayload) =>
     send(
@@ -41,6 +41,6 @@ export const mailer: Mailer & {
   sendPasswordReset: (to, url) =>
     send(to, `Reset your ${env.marketplaceName()} password`, <ResetPasswordEmail marketplace={env.marketplaceName()} url={url} />),
   sendNotification: (to, n) => send(to, n.title, <NotificationEmail marketplace={env.marketplaceName()} {...n} />),
-  sendSignupVerification: (e) =>
-    send(e.to, `Confirm your email for ${env.marketplaceName()}`, <SignupVerificationEmail marketplace={env.marketplaceName()} name={e.name} orgName={e.orgName} url={e.url} />),
+  sendSignupCode: (e) =>
+    send(e.to, `${e.code} is your ${env.marketplaceName()} code`, <SignupCodeEmail marketplace={env.marketplaceName()} name={e.name} orgName={e.orgName} code={e.code} />),
 };

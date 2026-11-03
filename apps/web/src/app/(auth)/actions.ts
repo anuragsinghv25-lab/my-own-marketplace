@@ -54,6 +54,7 @@ export async function signInWithPassword(_prev: ActionState, form: FormData): Pr
   const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error || !data.user) {
     if (error?.message?.toLowerCase().includes('banned')) return fail('This account has been deactivated.');
+    if (error?.message?.toLowerCase().includes('not confirmed')) return fail('Your email is not confirmed yet. Open “Register your business” and choose “I have a code” to enter the code we emailed you.');
     return fail('That email and password do not match.');
   }
   const profile = await profileByEmail(parsed.data.email);

@@ -28,6 +28,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <div className="space-y-4">
         {sp.error && ERRORS[sp.error] ? <Notice tone="bad">{ERRORS[sp.error]}</Notice> : null}
         {sp.signedout ? <Notice tone="accent">You have signed out.</Notice> : null}
+        {sp.confirmed ? <Notice tone="accent">Your email is confirmed. Sign in with the password you chose.</Notice> : null}
         <LoginForm next={safeNext(sp.next)} emailEnabled={configStatus().email} />
       </div>
       <p className="mt-5 text-sm text-mute text-center">

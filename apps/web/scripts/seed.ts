@@ -20,6 +20,8 @@ const admin = createClient(url, secret, { auth: { autoRefreshToken: false, persi
 const auth: AuthDirectory = {
   invite: () => Promise.reject(new Error('not used by seed')),
   magicLink: () => Promise.reject(new Error('not used by seed')),
+  createUnconfirmed: () => Promise.reject(new Error('not used by seed')),
+  confirmEmail: () => Promise.reject(new Error('not used by seed')),
   async createWithPassword(email, password, fullName) {
     const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { full_name: fullName } });
     if (error || !data.user) throw error ?? new Error('no user');

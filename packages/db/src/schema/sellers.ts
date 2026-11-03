@@ -102,6 +102,25 @@ export const signupAttempts = pgTable(
   (t) => [index('signup_attempts_ip_idx').on(t.ip, t.createdAt), index('signup_attempts_email_idx').on(t.email, t.createdAt)],
 );
 
+/** The 6-digit code a self-registered seller enters to confirm their email (no links: nothing depends on the site address). */
+export const signupCodes = pgTable(
+  'signup_codes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').notNull(),
+    email: text('email').notNull(),
+    /** sha256(id + code); the code itself is never stored */
+    codeHash: text('code_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    attempts: integer('attempts').notNull().default(0),
+    sends: integer('sends').notNull().default(1),
+    lastSentAt: timestamp('last_sent_at', { withTimezone: true }).notNull().defaultNow(),
+    consumedAt: timestamp('consumed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('signup_codes_user_key').on(t.userId), index('signup_codes_email_idx').on(t.email)],
+);
+
 // ---------------------------------------------------------------------------
 // Files (evidence, certificates, trademark documents)
 

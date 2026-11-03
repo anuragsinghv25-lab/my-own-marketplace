@@ -17,7 +17,10 @@ import {
   readFile,
   saveDivision,
   saveFile,
+  purgeUnverifiedSignups,
+  resendSignupCode,
   signUpSeller,
+  verifySignupCode,
   startOrgVerification,
   type Ctx,
   type SellerDeps,
@@ -54,7 +57,8 @@ const gstin = (state: string, pan: string) => `${state}${pan}1Z${gstinCheckChar(
 
 describe.skipIf(!testDatabaseUrl)('R4 · sellers and brands (Postgres)', () => {
   let t: Awaited<ReturnType<typeof freshTestDb>>;
-  const sent: { to: string; url: string }[] = [];
+  const sent: { to: string; url?: string; code?: string }[] = [];
+  const confirmed = new Set<string>();
   const deps = (): SellerDeps => ({
     db: t.db,
     appUrl: 'https://orbita.test',
@@ -64,10 +68,16 @@ describe.skipIf(!testDatabaseUrl)('R4 · sellers and brands (Postgres)', () => {
         await t.db.execute(sql`insert into auth.users (id, email) values (${id}, ${email})`);
         return { userId: id, link: { tokenHash: `h_${id}`, type: 'invite' } };
       },
+      createUnconfirmed: async (email) => {
+        const id = randomUUID();
+        await t.db.execute(sql`insert into auth.users (id, email) values (${id}, ${email})`);
+        return { userId: id };
+      },
+      confirmEmail: async (id) => void confirmed.add(id),
       delete: async (id) => void (await t.db.execute(sql`delete from auth.users where id = ${id}`)),
     },
     mailer: {
-      sendSignupVerification: async (e) => (sent.push({ to: e.to, url: e.url }), { delivered: true }),
+      sendSignupCode: async (e) => (sent.push({ to: e.to, code: e.code }), { delivered: true }),
       sendInvite: async (e) => (sent.push({ to: e.to, url: e.url }), { delivered: true }),
     },
   });
@@ -89,7 +99,7 @@ describe.skipIf(!testDatabaseUrl)('R4 · sellers and brands (Postgres)', () => {
   const activate = (email: string) => t.db.execute(sql`update profiles set status = 'active' where email = ${email}`);
 
   let oemOrg: string, resellerOrg: string, gamingId: string, businessId: string, vaId: string, requestId: string;
-  const oem = { legalName: 'Novara Devices Private Limited', businessType: 'private_limited' as const, gstin: gstin('29', 'AABCN5678F'), contactName: 'Meera Rao', email: 'meera@novara.test', phone: '98450 12345', address: { line1: '12 Industrial Area', city: 'Bengaluru', pincode: '560058' }, acceptTerms: true as const };
+  const oem = { legalName: 'Novara Devices Private Limited', businessType: 'private_limited' as const, gstin: gstin('29', 'AABCN5678F'), contactName: 'Meera Rao', email: 'meera@novara.test', phone: '98450 12345', address: { line1: '12 Industrial Area', city: 'Bengaluru', pincode: '560058' }, password: 'novara-2026', acceptTerms: true as const };
 
   beforeAll(async () => {
     t = await freshTestDb('r4');
@@ -115,14 +125,24 @@ describe.skipIf(!testDatabaseUrl)('R4 · sellers and brands (Postgres)', () => {
   it('exit demo 1: a seller registers, is verified, adds two users and a division', async () => {
     await expect(signUpSeller(deps(), meta, { ...oem, gstin: '29AABCN5678F1ZX' })).rejects.toThrow(/check character/);
     const res = await signUpSeller(deps(), meta, oem);
-    expect(res).toMatchObject({ delivered: true, manualLink: null });
-    expect(sent.at(-1)!.url).toMatch(/^https:\/\/orbita\.test\/auth\/confirm\?token_hash=.*&type=invite&next=%2Fwelcome$/);
+    expect(res).toMatchObject({ delivered: true, code: null });
+    const first = sent.at(-1)!.code!;
+    expect(first).toMatch(/^[0-9]{6}$/);
     oemOrg = res.orgId;
     await expect(signUpSeller(deps(), { ...meta, ip: '203.0.113.8' }, { ...oem, email: 'other@novara.test' })).rejects.toThrow(/GSTIN is already registered/);
-    // the email is confirmed: verification starts and reaches the reviewers
-    await activate(oem.email);
+    await expect(signUpSeller(deps(), { ...meta, ip: '203.0.113.9' }, { ...oem, gstin: gstin('29', 'AABCN9999F') })).rejects.toThrow(/waiting for its code/);
+    // a wrong code counts; resending too soon is refused; the code is never stored as such
+    const wrong = first === '000000' ? '111111' : '000000';
+    await expect(verifySignupCode(deps(), meta, { email: oem.email, code: wrong })).rejects.toThrow(/not right/);
+    await expect(resendSignupCode(deps(), { email: oem.email })).rejects.toThrow(/Wait a minute/);
+    const [stored] = await t.db.execute<{ code_hash: string; attempts: number }>(sql`select code_hash, attempts from signup_codes where email = ${oem.email}`);
+    expect(stored).toMatchObject({ attempts: 1 });
+    expect(stored!.code_hash).not.toContain(first);
+    // the right code confirms the email, activates the account and starts verification for reviewers
+    const v = await verifySignupCode(deps(), meta, { email: oem.email, code: first });
+    expect(confirmed.has(v.userId)).toBe(true);
+    await expect(verifySignupCode(deps(), meta, { email: oem.email, code: first })).rejects.toThrow(/not right/);
     const meera = await ctxFor(oem.email);
-    expect(await startOrgVerification(t.db, meera.actor, meta)).toBe(1);
     expect(await startOrgVerification(t.db, meera.actor, meta)).toBe(1); // idempotent: no second review
     const reviewer = await ctxFor('reviewer@orbita.test');
     const queue = await sellerQueue(t.db, reviewer, 'seller_org', 'queue');
@@ -192,9 +212,12 @@ describe.skipIf(!testDatabaseUrl)('R4 · sellers and brands (Postgres)', () => {
   });
 
   it('exit demo 4: a reseller asks; the OEM grants Gaming laptops in North and Central zones', async () => {
-    const r = await signUpSeller(deps(), { ...meta, ip: '198.51.100.4' }, { legalName: 'Pixel Retail LLP', businessType: 'llp', gstin: gstin('07', 'AAQFP1234K'), contactName: 'Kabir', email: 'kabir@pixel.test', phone: '+91 99100 55555', address: { line1: '5 Nehru Place', city: 'New Delhi', pincode: '110019' }, acceptTerms: true });
+    const r = await signUpSeller(deps(), { ...meta, ip: '198.51.100.4' }, { legalName: 'Pixel Retail LLP', businessType: 'llp', gstin: gstin('07', 'AAQFP1234K'), contactName: 'Kabir', email: 'kabir@pixel.test', phone: '+91 99100 55555', address: { line1: '5 Nehru Place', city: 'New Delhi', pincode: '110019' }, password: 'pixel-retail-1', acceptTerms: true });
     resellerOrg = r.orgId;
-    await activate('kabir@pixel.test');
+    // verification has not started yet: the code confirms the email first
+    await t.db.execute(sql`update signup_codes set last_sent_at = now() - interval '2 minutes' where email = 'kabir@pixel.test'`);
+    await resendSignupCode(deps(), { email: 'kabir@pixel.test' });
+    await verifySignupCode(deps(), meta, { email: 'kabir@pixel.test', code: sent.at(-1)!.code! });
     const kabir = await ctxFor('kabir@pixel.test');
     const [brand] = await t.db.execute<{ id: string }>(sql`select id from brands where name = 'NOVARA'`);
     await expect(requestAuthorisation(db(), kabir, resellerOrg, { brandId: brand!.id, categoryIds: [gamingId] })).rejects.toThrow(/still being verified/);
@@ -262,5 +285,15 @@ describe.skipIf(!testDatabaseUrl)('R4 · sellers and brands (Postgres)', () => {
     const ip = '192.0.2.99';
     for (let i = 0; i < 5; i++) await expect(signUpSeller(deps(), { ...meta, ip }, { ...oem, gstin: 'bad' })).rejects.toBeTruthy();
     await expect(signUpSeller(deps(), { ...meta, ip }, { ...oem, gstin: 'bad' })).rejects.toThrow(/Too many sign-up attempts/);
+  });
+
+  it('unfinished sign-ups are removed after a week; confirmed ones stay', async () => {
+    const r = await signUpSeller(deps(), { ...meta, ip: '192.0.2.50' }, { ...oem, legalName: 'Ghost Traders', gstin: gstin('27', 'AAGFG4321H'), email: 'ghost@traders.test' });
+    expect(await purgeUnverifiedSignups(deps())).toBe(0); // too recent
+    await t.db.execute(sql`update signup_codes set created_at = now() - interval '8 days' where email = 'ghost@traders.test'`);
+    expect(await purgeUnverifiedSignups(deps())).toBe(1);
+    const left = await t.db.execute(sql`select 1 from organisations where id = ${r.orgId} union all select 1 from profiles where email = 'ghost@traders.test' union all select 1 from auth.users where email = 'ghost@traders.test'`);
+    expect(left).toHaveLength(0);
+    expect((await getOrg(t.db, await ctxFor('admin@orbita.test'), oemOrg)).org.status).toBe('verified');
   });
 });

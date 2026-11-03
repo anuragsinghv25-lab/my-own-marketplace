@@ -48,6 +48,12 @@ function fakeAuth(db: () => Database) {
       await db().execute(sql`insert into auth.users (id, email) values (${id}, ${email})`);
       return { userId: id };
     },
+    async createUnconfirmed(email) {
+      const id = randomUUID();
+      await db().execute(sql`insert into auth.users (id, email) values (${id}, ${email})`);
+      return { userId: id };
+    },
+    async confirmEmail() {},
     async setPassword(id, pw) {
       passwords.set(id, pw);
     },

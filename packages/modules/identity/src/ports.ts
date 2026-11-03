@@ -15,6 +15,10 @@ export interface AuthDirectory {
   magicLink(email: string): Promise<EmailLink>;
   /** Create a confirmed user with a password (first admin, demo users). */
   createWithPassword(email: string, password: string, fullName: string): Promise<{ userId: string }>;
+  /** Create a user with a password whose email is not confirmed yet: they cannot sign in until confirmEmail (seller self sign-up). */
+  createUnconfirmed(email: string, password: string, fullName: string): Promise<{ userId: string }>;
+  /** Mark the email as confirmed (after the seller entered the emailed code). */
+  confirmEmail(userId: string): Promise<void>;
   /** Set a user's password (used only for demo accounts). */
   setPassword(userId: string, password: string): Promise<void>;
   /** Block or unblock sign-in. */

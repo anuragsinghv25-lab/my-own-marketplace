@@ -71,18 +71,16 @@ export function NotificationEmail(props: { marketplace: string; title: string; b
   );
 }
 
-export function SignupVerificationEmail(props: { marketplace: string; name: string; orgName: string; url: string }) {
+export function SignupCodeEmail(props: { marketplace: string; name: string; orgName: string; code: string }) {
   return (
-    <EmailLayout marketplace={props.marketplace} preview={`Confirm your email to finish registering ${props.orgName}`}>
+    <EmailLayout marketplace={props.marketplace} preview={`Your code is ${props.code}`}>
       <Text style={h1}>Confirm your email</Text>
       <Text style={p}>
-        Hi {props.name}, thanks for registering <strong>{props.orgName}</strong> as a seller on {props.marketplace}. Confirm your email and choose a password to continue.
+        Hi {props.name}, thanks for registering <strong>{props.orgName}</strong> as a seller on {props.marketplace}. Enter this code on the registration page:
       </Text>
-      <Button href={props.url} style={button}>
-        Confirm and set password
-      </Button>
+      <Text style={{ ...h1, fontSize: '32px', letterSpacing: '8px', fontFamily: 'ui-monospace, Menlo, monospace' }}>{props.code}</Text>
       <Text style={muted}>
-        After that, our team checks your GSTIN and business details (usually within two working days). You can prepare brand requests meanwhile. If you did not register, ignore this email.
+        The code works for 30 minutes. After that, our team checks your GSTIN and business details (usually within two working days). If you did not register, ignore this email: the registration is removed after a week.
       </Text>
     </EmailLayout>
   );
