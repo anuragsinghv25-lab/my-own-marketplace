@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { CheckCircle2, MailCheck } from 'lucide-react';
+import { CodeStep } from './register-code';
 import { gstinProblem, normalizeGstin, PAN_HOLDER } from '@orbita/sellers/india';
 import { Button, Checkbox, Field, Input, Select } from '@orbita/ui';
 import { registerSellerAction } from '@/app/(auth)/register/actions';
@@ -19,7 +20,8 @@ const TYPES = [
 
 /** Self sign-up: the business (checked against its GSTIN as you type), you, and the registered office. */
 export function RegisterForm({ states }: { states: { code: string; name: string }[] }) {
-  const [f, setF] = useState({ legalName: '', tradeName: '', businessType: 'private_limited', gstin: '', contactName: '', email: '', phone: '', line1: '', line2: '', city: '', pincode: '', acceptTerms: false, website2: '' });
+  const [f, setF] = useState({ legalName: '', tradeName: '', businessType: 'private_limited', gstin: '', contactName: '', email: '', phone: '', line1: '', line2: '', city: '', pincode: '', password: '', confirm: '', acceptTerms: false, website2: '' });
+  const [haveCode, setHaveCode] = useState(false);
   const [state, setState] = useState<ActionState>({ status: 'idle' });
   const [pending, start] = useTransition();
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.type === 'checkbox' ? (e.target as HTMLInputElement).checked : e.target.value });
@@ -28,20 +30,15 @@ export function RegisterForm({ states }: { states: { code: string; name: string 
   const gstInfo = useMemo(() => (g.length === 15 && !gstProblem ? { state: states.find((s) => s.code === g.slice(0, 2))?.name, pan: g.slice(2, 12), holder: PAN_HOLDER[g[5]!] } : null), [g, gstProblem, states]);
   const err = (k: string) => (state.status === 'error' ? state.fieldErrors?.[k]?.[0] ?? state.fieldErrors?.[`address.${k}`]?.[0] : undefined);
 
-  if (state.status === 'ok') {
-    const link = (state.data as { link?: string | null } | undefined)?.link;
-    return (
-      <div className="space-y-4">
-        <div className="mx-auto h-12 w-12 rounded-2xl bg-ok/10 text-ok grid place-items-center"><MailCheck size={22} /></div>
-        <p className="text-center font-medium">{state.message}</p>
-        <p className="text-sm text-mute text-center">Open it to confirm your email and choose a password. Then our team verifies your business; you can prepare brand requests meanwhile.</p>
-        {link ? <a href={link} className="block text-center text-sm text-accent hover:underline break-all">{link}</a> : null}
-      </div>
-    );
+  if (state.status === 'ok' || haveCode) {
+    const email = state.status === 'ok' ? String(state.data?.email ?? f.email) : '';
+    return <CodeStep email={email} password={state.status === 'ok' ? f.password : ''} message={state.status === 'ok' ? state.message : undefined} icon={<MailCheck size={22} />} onBack={() => { setHaveCode(false); setState({ status: 'idle' }); }} />;
   }
 
+  const mismatch = f.confirm.length > 0 && f.confirm !== f.password;
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (f.password !== f.confirm) return setState({ status: 'error', message: 'The two passwords do not match.' });
     start(async () =>
       setState(
         await registerSellerAction({
@@ -53,6 +50,7 @@ export function RegisterForm({ states }: { states: { code: string; name: string 
           email: f.email,
           phone: f.phone,
           address: { line1: f.line1, line2: f.line2, city: f.city, pincode: f.pincode },
+          password: f.password,
           acceptTerms: f.acceptTerms as true,
           website2: f.website2,
         }),
@@ -111,6 +109,17 @@ export function RegisterForm({ states }: { states: { code: string; name: string 
           </Field>
         </div>
       </fieldset>
+      <fieldset className="space-y-3">
+        <legend className="text-xs font-medium uppercase tracking-wider text-mute mb-1">Password</legend>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Choose a password" htmlFor="rg-pw" required error={err('password')} hint="10+ characters, a letter and a number">
+            <Input id="rg-pw" type="password" value={f.password} onChange={set('password')} autoComplete="new-password" />
+          </Field>
+          <Field label="Repeat it" htmlFor="rg-pw2" required error={mismatch ? 'Does not match' : undefined}>
+            <Input id="rg-pw2" type="password" value={f.confirm} onChange={set('confirm')} autoComplete="new-password" />
+          </Field>
+        </div>
+      </fieldset>
       {/* real people never see this field */}
       <input type="text" name="website2" value={f.website2} onChange={set('website2') as never} tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />
       <label className="flex items-start gap-2 text-sm">
@@ -118,9 +127,13 @@ export function RegisterForm({ states }: { states: { code: string; name: string 
         <span>I accept the seller terms and confirm the details above are correct.</span>
       </label>
       {err('acceptTerms') ? <p className="text-xs text-bad -mt-2">{err('acceptTerms')}</p> : null}
-      <Button type="submit" className="w-full" loading={pending} disabled={!f.acceptTerms || !!gstProblem}>
+      <Button type="submit" className="w-full" loading={pending} disabled={!f.acceptTerms || !!gstProblem || mismatch}>
         Register
       </Button>
+      <p className="text-center text-sm text-mute">
+        Registered already?{' '}
+        <button type="button" onClick={() => setHaveCode(true)} className="text-accent hover:underline">I have a code</button>
+      </p>
     </form>
   );
 }

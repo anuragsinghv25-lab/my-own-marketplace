@@ -42,6 +42,18 @@ export const supabaseAuthDirectory: AuthDirectory = {
     return { userId: data.user.id };
   },
 
+  async createUnconfirmed(email, password, fullName) {
+    // admin createUser sends no email; Orbita emails its own code
+    const { data, error } = await adminSupabase().auth.admin.createUser({ email, password, email_confirm: false, user_metadata: { full_name: fullName } });
+    if (error || !data.user) fail(error?.message ?? 'No user returned', error?.status);
+    return { userId: data.user.id };
+  },
+
+  async confirmEmail(userId) {
+    const { error } = await adminSupabase().auth.admin.updateUserById(userId, { email_confirm: true });
+    if (error) fail(error.message, error.status);
+  },
+
   async setPassword(userId, password) {
     const { error } = await adminSupabase().auth.admin.updateUserById(userId, { password });
     if (error) fail(error.message, error.status);
