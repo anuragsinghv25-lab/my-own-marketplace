@@ -11,7 +11,7 @@ interface Def {
   subjectType: string;
   name: string;
   stages: { key: string; label: string; role: string }[];
-  reasonCodes: { code: string; label: string; for: ('send_back' | 'discard')[] }[];
+  reasonCodes: { code: string; label: string; for: ('send_back' | 'discard' | 'reject' | 'request_info' | 'escalate')[] }[];
   slaHours: number;
   reminderHours: number;
   maxAttempts: number;

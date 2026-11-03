@@ -17,13 +17,15 @@ export interface ReviewStage {
   label: string;
   /** the role that acts at this stage */
   role: string;
+  /** reached only when the stage before escalates (R4: reviewer → approver) */
+  escalationOnly?: boolean;
 }
 
 export interface ReasonCode {
   code: string;
   label: string;
   /** which decisions may use it */
-  for: ('send_back' | 'discard')[];
+  for: ('send_back' | 'discard' | 'reject' | 'request_info' | 'escalate')[];
 }
 
 export const reviewDefinitions = pgTable('review_definitions', {
@@ -44,7 +46,7 @@ export const reviewDefinitions = pgTable('review_definitions', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const reviewState = pgEnum('review_state', ['open', 'sent_back', 'approved', 'withdrawn', 'discarded']);
+export const reviewState = pgEnum('review_state', ['open', 'sent_back', 'approved', 'withdrawn', 'discarded', 'rejected']);
 
 export const reviewRequests = pgTable(
   'review_requests',
@@ -61,6 +63,8 @@ export const reviewRequests = pgTable(
     workgroupId: uuid('workgroup_id'),
     state: reviewState('state').notNull().default('open'),
     attempt: integer('attempt').notNull().default(1),
+    /** R4: the reviewer asked the submitter for more; set until they reply (no SLA runs meanwhile) */
+    awaitingReplySince: timestamp('awaiting_reply_since', { withTimezone: true }),
     submittedBy: uuid('submitted_by').notNull(),
     submittedAt: timestamp('submitted_at', { withTimezone: true }).notNull().defaultNow(),
     decidedAt: timestamp('decided_at', { withTimezone: true }),
@@ -98,7 +102,7 @@ export const reviewTasks = pgTable(
   (t) => [index('review_tasks_open_idx').on(t.state, t.assigneeId, t.dueAt), index('review_tasks_request_idx').on(t.requestId, t.attempt)],
 );
 
-export const reviewDecisionKind = pgEnum('review_decision_kind', ['approve', 'send_back', 'discard', 'withdraw']);
+export const reviewDecisionKind = pgEnum('review_decision_kind', ['approve', 'send_back', 'discard', 'withdraw', 'reject', 'request_info', 'respond', 'escalate']);
 
 export const reviewDecisions = pgTable(
   'review_decisions',
@@ -112,6 +116,8 @@ export const reviewDecisions = pgTable(
     decision: reviewDecisionKind('decision').notNull(),
     reasonCode: text('reason_code'),
     note: text('note').notNull().default(''),
+    /** files sent with an info request reply or a decision */
+    fileIds: uuid('file_ids').array().notNull().default(sql`'{}'::uuid[]`),
     decidedBy: uuid('decided_by').notNull(),
     decidedAt: timestamp('decided_at', { withTimezone: true }).notNull().defaultNow(),
   },

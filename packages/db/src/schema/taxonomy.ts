@@ -58,6 +58,8 @@ export const categoryNodes = pgTable(
     externalId: text('external_id'),
     /** optional UNSPSC commodity this category maps to (for procurement reporting); children inherit it */
     unspscCode: text('unspsc_code'),
+    /** R4: trademark (Nice) classes that fit this category; children inherit them. Drives suggested categories and auto-approval */
+    trademarkClasses: smallint('trademark_classes').array().notNull().default(sql`'{}'::smallint[]`),
     /** explicit owner; children inherit it unless they set their own */
     workgroupId: uuid('workgroup_id').references(() => workgroups.id),
     status: nodeStatus('status').notNull().default('active'),

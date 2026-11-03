@@ -30,7 +30,7 @@ export interface Ctx {
   meta: RequestMeta;
 }
 
-export type DecisionKind = 'approve' | 'send_back' | 'discard' | 'withdraw';
+export type DecisionKind = 'approve' | 'send_back' | 'discard' | 'withdraw' | 'reject' | 'request_info' | 'escalate';
 
 const HOUR = 3_600_000;
 
@@ -51,8 +51,10 @@ export async function listDefinitions(db: DbOrTx, ability: AppAbility) {
 const reasonSchema = z.object({
   code: z.string().trim().regex(/^[a-z0-9_]{2,40}$/, 'Codes use lower-case letters, digits and underscores.'),
   label: z.string().trim().min(2).max(120),
-  for: z.array(z.enum(['send_back', 'discard'])).min(1, 'Pick at least one decision the reason applies to.'),
+  for: z.array(z.enum(['send_back', 'discard', 'reject', 'request_info', 'escalate'])).min(1, 'Pick at least one decision the reason applies to.'),
 });
+
+const DECISION_WORDS: Record<string, string> = { send_back: 'sending back', discard: 'discarding', reject: 'rejecting', request_info: 'asking for information', escalate: 'escalating' };
 
 export const definitionPatch = z.object({
   name: z.string().trim().min(2).max(120),
@@ -69,11 +71,13 @@ export async function updateDefinition(deps: { db: Database }, ctx: Ctx, id: str
   if (p.reminderHours >= p.slaHours) throw badRequest('Send the reminder before the task is due: reminder hours must be less than the SLA.');
   const codes = p.reasonCodes.map((r) => r.code);
   if (new Set(codes).size !== codes.length) throw badRequest('Each reason code must be unique.');
-  for (const kind of ['send_back', 'discard'] as const)
-    if (!p.reasonCodes.some((r) => r.for.includes(kind))) throw badRequest(`Keep at least one reason for ${kind === 'send_back' ? 'sending back' : 'discarding'}.`);
   return deps.db.transaction(async (tx) => {
     const [d] = await tx.select().from(reviewDefinitions).where(eq(reviewDefinitions.id, id)).for('update');
     if (!d) throw notFound('Review definition');
+    // every decision that has reasons today keeps at least one
+    const used = new Set(d.reasonCodes.flatMap((r) => r.for));
+    for (const kind of used)
+      if (!p.reasonCodes.some((r) => (r.for as string[]).includes(kind))) throw badRequest(`Keep at least one reason for ${DECISION_WORDS[kind] ?? kind}.`);
     const stages = d.stages.map((s) => ({ ...s, label: p.stageLabels?.[s.key] ?? s.label }));
     const [row] = await tx
       .update(reviewDefinitions)
@@ -175,41 +179,81 @@ export interface DecideInput {
   decision: DecisionKind;
   reasonCode?: string | null;
   note?: string;
+  fileIds?: string[];
   by: string;
 }
 
+const NEEDS_REASON: DecisionKind[] = ['send_back', 'discard', 'reject', 'escalate'];
+const NEEDS_NOTE: DecisionKind[] = ['send_back', 'discard', 'reject', 'escalate', 'request_info'];
+const VERB: Partial<Record<DecisionKind, string>> = {
+  send_back: 'sending this back',
+  discard: 'discarding this',
+  reject: 'rejecting this',
+  escalate: 'escalating this',
+  request_info: 'asking for more information',
+};
+
 /**
- * Records a decision on the open attempt. Send-back and discard need a reason code from the
- * definition and a note. Approving a stage that is not the last opens the next stage's task.
- * Returns the request's new state ("open" while later stages remain).
+ * Records a decision on the open task.
+ * - approve: moves to the next regular stage, or finishes the request
+ * - escalate: moves to the next escalation-only stage (R4: reviewer → approver); the request stays open
+ * - request_info: pauses the request until the submitter replies (`respond`); no SLA runs meanwhile
+ * - send_back, discard, reject, withdraw: finish the attempt or the request
+ * Reasons come from the definition; every decision except approve and withdraw needs a note.
  */
-export async function decide(tx: DbOrTx, input: DecideInput): Promise<{ request: ReviewRequest; final: boolean; reason: ReasonCode | null }> {
+export async function decide(tx: DbOrTx, input: DecideInput): Promise<{ request: ReviewRequest; final: boolean; reason: ReasonCode | null; nextStage: string | null }> {
   const [r] = await tx.select().from(reviewRequests).where(eq(reviewRequests.id, input.requestId)).for('update');
   if (!r) throw notFound('Review request');
   if (r.state !== 'open') throw conflict('This request is not waiting for a decision any more.');
+  if (r.awaitingReplySince && input.decision !== 'withdraw') throw conflict('This request is waiting for a reply to an information request.');
   const [d] = await tx.select().from(reviewDefinitions).where(eq(reviewDefinitions.id, r.definitionId));
   const task = await openTask(tx, r.id);
   const note = (input.note ?? '').trim();
   let reason: ReasonCode | null = null;
-  if (input.decision === 'send_back' || input.decision === 'discard') {
-    reason = d!.reasonCodes.find((x) => x.code === input.reasonCode && x.for.includes(input.decision as 'send_back' | 'discard')) ?? null;
-    if (!reason) throw badRequest(`Pick a reason for ${input.decision === 'send_back' ? 'sending this back' : 'discarding this'}.`);
-    if (note.length < 5) throw badRequest('Add a note so the category manager knows what to do.');
+  if (input.reasonCode || NEEDS_REASON.includes(input.decision)) {
+    reason = d!.reasonCodes.find((x) => x.code === input.reasonCode && (x.for as string[]).includes(input.decision)) ?? null;
+    if (!reason) throw badRequest(`Pick a reason for ${VERB[input.decision] ?? 'this decision'}.`);
   }
-  await tx.insert(reviewDecisions).values({ requestId: r.id, taskId: task?.id ?? null, attempt: r.attempt, decision: input.decision, reasonCode: reason?.code ?? null, note, decidedBy: input.by });
+  if (NEEDS_NOTE.includes(input.decision) && note.length < 5) throw badRequest('Add a note so the other side knows what to do.');
+
+  const idx = task ? d!.stages.findIndex((s) => s.key === task.stage) : -1;
+  const later = d!.stages.slice(idx + 1);
+  const nextStage =
+    input.decision === 'approve' ? (later.find((s) => !s.escalationOnly) ?? null) : input.decision === 'escalate' ? (later.find((s) => s.escalationOnly) ?? null) : null;
+  if (input.decision === 'escalate' && !nextStage) throw preconditionFailed('There is no one to escalate this to.');
+
+  await tx.insert(reviewDecisions).values({ requestId: r.id, taskId: task?.id ?? null, attempt: r.attempt, decision: input.decision, reasonCode: reason?.code ?? null, note, fileIds: input.fileIds ?? [], decidedBy: input.by });
   if (task) await tx.update(reviewTasks).set({ state: input.decision === 'withdraw' ? 'cancelled' : 'done', completedAt: new Date(), assigneeId: task.assigneeId ?? (input.decision === 'withdraw' ? null : input.by) }).where(eq(reviewTasks.id, task.id));
 
-  if (input.decision === 'approve' && task) {
-    const idx = d!.stages.findIndex((s) => s.key === task.stage);
-    const next = d!.stages[idx + 1];
-    if (next) {
-      await tx.insert(reviewTasks).values({ requestId: r.id, attempt: r.attempt, stage: next.key, snapshotId: task.snapshotId, snapshotHash: task.snapshotHash, dueAt: new Date(Date.now() + d!.slaHours * HOUR) });
-      return { request: r, final: false, reason };
-    }
+  if (nextStage) {
+    await tx.insert(reviewTasks).values({ requestId: r.id, attempt: r.attempt, stage: nextStage.key, snapshotId: task?.snapshotId ?? null, snapshotHash: task?.snapshotHash ?? null, dueAt: new Date(Date.now() + d!.slaHours * HOUR) });
+    return { request: r, final: false, reason, nextStage: nextStage.key };
   }
-  const state = ({ approve: 'approved', send_back: 'sent_back', discard: 'discarded', withdraw: 'withdrawn' } as const)[input.decision];
-  const [updated] = await tx.update(reviewRequests).set({ state, decidedAt: new Date() }).where(eq(reviewRequests.id, r.id)).returning();
-  return { request: updated!, final: true, reason };
+  if (input.decision === 'request_info') {
+    const [updated] = await tx.update(reviewRequests).set({ awaitingReplySince: new Date() }).where(eq(reviewRequests.id, r.id)).returning();
+    return { request: updated!, final: false, reason, nextStage: null };
+  }
+  const state = ({ approve: 'approved', send_back: 'sent_back', discard: 'discarded', withdraw: 'withdrawn', reject: 'rejected' } as const)[input.decision as 'approve' | 'send_back' | 'discard' | 'withdraw' | 'reject'];
+  const [updated] = await tx.update(reviewRequests).set({ state, decidedAt: new Date(), awaitingReplySince: null }).where(eq(reviewRequests.id, r.id)).returning();
+  return { request: updated!, final: true, reason, nextStage: null };
+}
+
+/** The submitter answers an information request; the same stage reopens with the same reviewer. */
+export async function respond(tx: DbOrTx, input: { requestId: string; by: string; note: string; fileIds?: string[] }) {
+  const [r] = await tx.select().from(reviewRequests).where(eq(reviewRequests.id, input.requestId)).for('update');
+  if (!r) throw notFound('Review request');
+  if (r.state !== 'open' || !r.awaitingReplySince) throw conflict('Nobody is waiting for a reply on this request.');
+  const note = input.note.trim();
+  if (note.length < 2 && !input.fileIds?.length) throw badRequest('Write a reply or attach a file.');
+  const [d] = await tx.select().from(reviewDefinitions).where(eq(reviewDefinitions.id, r.definitionId));
+  const [last] = await tx.select().from(reviewTasks).where(eq(reviewTasks.requestId, r.id)).orderBy(desc(reviewTasks.createdAt)).limit(1);
+  await tx.insert(reviewDecisions).values({ requestId: r.id, taskId: last?.id ?? null, attempt: r.attempt, decision: 'respond', note, fileIds: input.fileIds ?? [], decidedBy: input.by });
+  const [task] = await tx
+    .insert(reviewTasks)
+    .values({ requestId: r.id, attempt: r.attempt, stage: last?.stage ?? d!.stages[0]!.key, assigneeId: last?.assigneeId ?? null, snapshotId: last?.snapshotId ?? null, snapshotHash: last?.snapshotHash ?? null, dueAt: new Date(Date.now() + d!.slaHours * HOUR) })
+    .returning();
+  const [updated] = await tx.update(reviewRequests).set({ awaitingReplySince: null }).where(eq(reviewRequests.id, r.id)).returning();
+  return { request: updated!, task: task! };
 }
 
 /** Closes a request that is waiting on the submitter (sent back), e.g. when they discard their draft. */
@@ -358,7 +402,7 @@ export async function listRequests(db: DbOrTx, f: QueueFilter) {
     .where(
       and(
         f.subjectType ? eq(reviewRequests.subjectType, f.subjectType) : undefined,
-        f.view === 'queue' ? and(eq(reviewRequests.state, 'open'), isNull(reviewTasks.assigneeId)) : undefined,
+        f.view === 'queue' ? and(eq(reviewRequests.state, 'open'), isNull(reviewTasks.assigneeId), isNull(reviewRequests.awaitingReplySince)) : undefined,
         f.view === 'mine' ? and(eq(reviewRequests.state, 'open'), eq(reviewTasks.assigneeId, f.actorId)) : undefined,
         f.states?.length ? inArray(reviewRequests.state, f.states) : undefined,
         f.overdueOnly ? and(eq(reviewRequests.state, 'open'), lt(reviewTasks.dueAt, new Date())) : undefined,

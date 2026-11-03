@@ -7,7 +7,7 @@ import { NextResponse, type NextRequest } from 'next/server';
  * 2. sends signed-out visitors of protected pages to /login.
  * Authorisation (roles) is checked on the server in each page / route, not here.
  */
-const PUBLIC_PREFIXES = ['/login', '/forgot-password', '/auth/', '/setup', '/design', '/api/'];
+const PUBLIC_PREFIXES = ['/login', '/register', '/forgot-password', '/auth/', '/setup', '/design', '/api/'];
 
 export async function proxy(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;

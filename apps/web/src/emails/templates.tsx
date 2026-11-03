@@ -70,3 +70,20 @@ export function NotificationEmail(props: { marketplace: string; title: string; b
     </EmailLayout>
   );
 }
+
+export function SignupVerificationEmail(props: { marketplace: string; name: string; orgName: string; url: string }) {
+  return (
+    <EmailLayout marketplace={props.marketplace} preview={`Confirm your email to finish registering ${props.orgName}`}>
+      <Text style={h1}>Confirm your email</Text>
+      <Text style={p}>
+        Hi {props.name}, thanks for registering <strong>{props.orgName}</strong> as a seller on {props.marketplace}. Confirm your email and choose a password to continue.
+      </Text>
+      <Button href={props.url} style={button}>
+        Confirm and set password
+      </Button>
+      <Text style={muted}>
+        After that, our team checks your GSTIN and business details (usually within two working days). You can prepare brand requests meanwhile. If you did not register, ignore this email.
+      </Text>
+    </EmailLayout>
+  );
+}

@@ -10,7 +10,7 @@ import { nextMonday, ScheduleFields, type ScheduleValue } from './schedule-field
 export interface Reason {
   code: string;
   label: string;
-  for: ('send_back' | 'discard')[];
+  for: ('send_back' | 'discard' | 'reject' | 'request_info' | 'escalate')[];
 }
 
 export function DecisionPanel({

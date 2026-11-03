@@ -3,6 +3,8 @@ import {
   AlertTriangle,
   BadgeCheck,
   Building2,
+  Factory,
+  FileBadge,
   Flag,
   FolderTree,
   Globe,
@@ -40,4 +42,6 @@ export const NAV_ICONS: Record<IconName, LucideIcon> = {
   alert: AlertTriangle,
   palette: Palette,
   activity: Activity,
+  factory: Factory,
+  certificate: FileBadge,
 };

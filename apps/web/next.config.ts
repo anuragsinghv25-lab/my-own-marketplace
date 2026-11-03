@@ -24,7 +24,11 @@ const nextConfig: NextConfig = {
     '@orbita/reviews',
     '@orbita/notifications',
     '@orbita/category-publishing',
+    '@orbita/sellers',
+    '@orbita/brands',
   ],
+  // evidence uploads (up to 4 MB) go through server actions; Vercel functions accept 4.5 MB bodies
+  experimental: { serverActions: { bodySizeLimit: '4.5mb' } },
   poweredByHeader: false,
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];

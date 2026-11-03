@@ -8,6 +8,7 @@ import { recordAudit } from '@orbita/audit';
 import { getDb, profiles } from '@orbita/db';
 import { isAppError } from '@orbita/domain';
 import { bootstrapPlatform, completeInvite, confirmUrl, needsBootstrap, recordSignIn } from '@orbita/identity';
+import { startOrgVerification } from '@orbita/sellers';
 import type { ActionState } from '@/lib/action-state';
 import { safeNext } from '@/lib/safe-next';
 import { recoveryLink, signInLink, supabaseAuthDirectory } from '@/server/auth-directory';
@@ -138,7 +139,10 @@ export async function acceptInvite(_prev: ActionState, form: FormData): Promise<
     data: { full_name: parsed.data.fullName },
   });
   if (error) return fail(error.message);
-  await completeInvite({ db: getDb() }, session.actor, await requestMeta(), { fullName: parsed.data.fullName });
+  const meta = await requestMeta();
+  await completeInvite({ db: getDb() }, session.actor, meta, { fullName: parsed.data.fullName });
+  // R4: a seller who registered themselves now has a confirmed email, so verification can start
+  await startOrgVerification(getDb(), session.actor, meta).catch((err) => log.error('seller.verification_start_failed', { err }));
   redirect('/');
 }
 

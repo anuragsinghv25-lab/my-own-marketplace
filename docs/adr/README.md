@@ -15,5 +15,6 @@ Short records of significant decisions: the context, what we chose, and what it 
 | [0009](0009-standard-taxonomies.md) | Shopify-style variable-depth tree; adopt from Shopify and UNSPSC | Accepted |
 | [0010](0010-typed-rules-in-the-contract.md) | Typed category rules compiled into the contract | Accepted |
 | [0011](0011-review-engine-and-daily-job.md) | Review engine as a module; timers as one daily job | Accepted |
+| [0012](0012-seller-cases-and-evidence-files.md) | One lean case path for sellers; evidence files behind a storage port | Accepted |
 
 Template: [`0000-template.md`](0000-template.md)
